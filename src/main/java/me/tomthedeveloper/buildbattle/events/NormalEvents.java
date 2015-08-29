@@ -1,0 +1,217 @@
+package me.tomthedeveloper.buildbattle.events;
+
+import me.TomTheDeveloper.Handlers.UserManager;
+import me.TomTheDeveloper.User;
+import me.tomthedeveloper.buildbattle.BuildBattle;
+import me.tomthedeveloper.buildbattle.stats.MySQLDatabase;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.player.PlayerQuitEvent;
+
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * Created by Tom on 28/08/2015.
+ */
+public class NormalEvents implements Listener {
+
+
+    private BuildBattle plugin;
+
+    public NormalEvents(BuildBattle plugin){
+        this.plugin = plugin;
+    }
+
+
+    @EventHandler
+    public void onQuitSaveStats(PlayerQuitEvent event) {
+        if(plugin.getGameInstanceManager().getGameInstance(event.getPlayer()) != null){
+            plugin.getGameInstanceManager().getGameInstance(event.getPlayer()).leaveAttempt(event.getPlayer());
+        }
+        final User user = UserManager.getUser(event.getPlayer().getUniqueId());
+
+       /* List<String> temp = new ArrayList<String>();
+        temp.add("gamesplayed");
+        temp.add("kills");
+        temp.add("deaths");
+        temp.add("highestwave");
+        temp.add("exp");
+        temp.add("level");
+        temp.add("orbs");
+        for (String s : temp) {
+            plugin.getMyDatabase().updateDocument(new BasicDBObject("UUID", event.getPlayer().getUniqueId().toString()), new BasicDBObject(s, user.getInt(s)));
+            System.out.println("");
+        }
+        */
+        List<String> temp = new ArrayList<String>();
+        temp.add("gamesplayed");
+        temp.add("wins");
+        temp.add("loses");
+        temp.add("highestwin");
+        temp.add("blocksplaced");
+        temp.add("blocksbroken");
+        temp.add("particles");
+        final Player player = event.getPlayer();
+        for(final String s:temp){
+
+            if(plugin.isDatabaseActivated()) {
+                Bukkit.getScheduler().runTaskAsynchronously(plugin,new Runnable() {
+                    @Override
+                    public void run() {
+                        int i;
+                        try{
+                            i = plugin.getMySQLDatabase().getStat(player.getUniqueId().toString(),s);
+                        }catch (NullPointerException npe){
+                            i = 0;
+                            System.out.print("COULDN'T GET STATS FROM PLAYER: " + player.getName());
+                        }
+
+                        if(i > user.getInt(s)){
+                            plugin.getMySQLDatabase().setStat(player.getUniqueId().toString(), s, user.getInt(s) + i);
+                        }else {
+                            plugin.getMySQLDatabase().setStat(player.getUniqueId().toString(), s, user.getInt(s));
+                        }
+                    }
+                });
+
+            }
+            else {
+                plugin.getFileStats().saveStat(player, s);
+            }
+
+
+        }
+
+        UserManager.removeUser(event.getPlayer().getUniqueId());
+    }
+
+
+
+    @EventHandler
+    public void onJoin(final PlayerJoinEvent event) {
+        if(plugin.isBungeeActivated())
+            plugin.getGameInstanceManager().getGameInstances().get(0).teleportToLobby(event.getPlayer());
+        if(!plugin.isDatabaseActivated()){
+            List<String> temp = new ArrayList<String>();
+            temp.add("gamesplayed");
+            temp.add("wins");
+            temp.add("loses");
+            temp.add("highestwin");
+            temp.add("blocksplaced");
+            temp.add("blocksbroken");
+            temp.add("particles");
+            for(String s:temp) {
+                plugin.getFileStats().loadStat(event.getPlayer(), s);
+            }
+            return;
+        }
+        User user = UserManager.getUser(event.getPlayer().getUniqueId());
+
+/*        if (plugin.getMyDatabase().getSingle(new BasicDBObject().append("UUID", event.getPlayer().getUniqueId().toString())) == null) {
+            plugin.getMyDatabase().insertDocument(new String[]{"UUID", "gamesplayed", "kills", "deaths", "highestwave", "exp", "level", "orbs"},
+                    new Object[]{event.getPlayer().getUniqueId().toString(), 0, 0, 0, 0, 0, 0, 0});
+        }
+
+        List<String> temp = new ArrayList<String>();
+        temp.add("gamesplayed");
+        temp.add("kills");
+        temp.add("deaths");
+        temp.add("highestwave");
+        temp.add("exp");
+        temp.add("level");
+        temp.add("orbs");
+        for (String s : temp) {
+            user.setInt(s, (Integer) plugin.getMyDatabase().getSingle(new BasicDBObject("UUID", event.getPlayer().getUniqueId().toString())).get(s));
+        } */
+
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
+
+
+            final String playername = event.getPlayer().getUniqueId().toString();
+            final Player player = event.getPlayer();
+            @Override
+            public void run() {
+                boolean b = false;
+                MySQLDatabase database = plugin.getMySQLDatabase();
+                ResultSet resultSet = database.executeQuery("SELECT UUID from playerstats WHERE UUID='"+playername+"'");
+                try {
+                    if(!resultSet.next()) {
+                        database.insertPlayer(playername);
+                        b = true;
+                    }
+
+                    int gamesplayed = 0;
+                    int wins = 0;
+                    int highestwin = 0;
+                    int loses = 0;
+                    int blocksPlaced = 0;
+                    int blocksBroken = 0;
+                    int particles = 0;
+                    gamesplayed =    database.getStat(player.getUniqueId().toString(), "gamesplayed");
+                    wins = database.getStat(player.getUniqueId().toString(), "wins");
+                    loses = database.getStat(player.getUniqueId().toString(), "loses");
+                    highestwin = database.getStat(player.getUniqueId().toString(), "highestwin");
+                    blocksPlaced = database.getStat(player.getUniqueId().toString(), "blocksplaced");
+                    blocksBroken = database.getStat(player.getUniqueId().toString(), "blocksbroken");
+                    particles = database.getStat(player.getUniqueId().toString(),"particles");
+                    User user = UserManager.getUser(player.getUniqueId());
+
+                    user.setInt("gamesplayed", gamesplayed);
+                    user.setInt("wins", wins);
+                    user.setInt("highestwin", highestwin);
+                    user.setInt("loses", loses);
+                    user.setInt("blocksplaced", blocksPlaced);
+                    user.setInt("blocksbroken", blocksBroken);
+                    user.setInt("particles",particles);
+                    b = true;
+                } catch (SQLException e1) {
+                    System.out.print("CONNECTION FAILED FOR PLAYER " + event.getPlayer().getName());
+                    //e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                }
+                if(b=false){
+                    try {
+                        if(!resultSet.next()) {
+                            database.insertPlayer(playername);
+                            b = true;
+                        }
+
+                        int gamesplayed = 0;
+                        int wins = 0;
+                        int highestwin = 0;
+                        int loses = 0;
+                        int blocksPlaced = 0;
+                        int blocksBroken = 0;
+                        int particles = 0;
+                        gamesplayed =    database.getStat(player.getUniqueId().toString(), "gamesplayed");
+                        wins = database.getStat(player.getUniqueId().toString(), "wins");
+                        loses = database.getStat(player.getUniqueId().toString(), "loses");
+                        highestwin = database.getStat(player.getUniqueId().toString(), "highestwin");
+                        blocksPlaced = database.getStat(player.getUniqueId().toString(), "blocksplaced");
+                        blocksBroken = database.getStat(player.getUniqueId().toString(), "blocksbroken");
+                        particles = database.getStat(player.getUniqueId().toString(),"particles");
+                        User user = UserManager.getUser(player.getUniqueId());
+
+                        user.setInt("gamesplayed", gamesplayed);
+                        user.setInt("wins", wins);
+                        user.setInt("highestwin", highestwin);
+                        user.setInt("loses", loses);
+                        user.setInt("blocksplaced", blocksPlaced);
+                        user.setInt("blocksbroken", blocksBroken);
+                        user.setInt("particles",particles);
+                        b = true;
+                    } catch (SQLException e1) {
+                        System.out.print("CONNECTION FAILED TWICE FOR PLAYER " + event.getPlayer().getName());
+                        //e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+                    }
+                }
+            }
+        });
+
+    }
+}

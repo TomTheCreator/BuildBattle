@@ -1,0 +1,24 @@
+main: me.tomthedeveloper.buildbattle.BuildBattle
+version: 1.0
+name: BuildBattle
+depend: [GameAPI, WorldEdit]
+softdepend: [BarAPI]
+commands:
+  leave:
+    usage: /leave
+    description: Leave the game
+  BuildBattle:
+    usage: /BuildBattle
+    description: The main command
+  addsigns:
+    usage: /addsigns
+    description: Adds signs to the plugin!
+  smartreload:
+    usage: /smartreload
+    description: Smart reloads the plugin
+  smartstop:
+    usage: /smartstop
+    description: stops the server when all the games are finished!
+  stats:
+    usage: /stats
+    description: See your stats
