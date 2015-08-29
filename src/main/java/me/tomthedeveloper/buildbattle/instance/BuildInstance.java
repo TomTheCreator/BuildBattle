@@ -165,6 +165,8 @@ public class BuildInstance extends GameInstance {
                 if (getTimer() == 0) {
                     extracounter = 0;
                     setGameState(GameState.INGAME);
+                    getPlotManager().distributePlots();
+                    getPlotManager().teleportToPlots();
                     setTimer(ConfigPreferences.getBuildTime());
                     for (Player player : getPlayers()) {
                         player.getInventory().clear();
@@ -173,8 +175,7 @@ public class BuildInstance extends GameInstance {
                         player.getInventory().setItem(8, IngameMenu.getMenuItem());
                     }
                     setRandomTheme();
-                    getPlotManager().distributePlots();
-                    getPlotManager().teleportToPlots();
+
                     getChatManager().broadcastMessage("The-Game-Has-Started", "The game has started! Start building guys!!");
 
 

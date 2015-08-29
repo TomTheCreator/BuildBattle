@@ -373,7 +373,7 @@ public class IngameEvents implements Listener {
     {
         for(GameInstance gameInstance: plugin.getGameInstanceManager().getGameInstances()) {
             BuildInstance buildInstance = (BuildInstance) gameInstance;
-            if(buildInstance.getPlotManager().getPlots().get(0) != null) {
+            if(buildInstance.getPlotManager().getPlots().size() != 0&&buildInstance.getPlotManager().getPlots().get(0) != null) {
                 if(buildInstance.getPlotManager().getPlots().get(0).getCenter().getWorld().getName().equalsIgnoreCase(event.getBlock().getWorld().getName())) {
                     if(event.getSource().getType() == Material.FIRE)
                         event.setCancelled(true);
@@ -463,6 +463,8 @@ public class IngameEvents implements Listener {
         }
         User user = UserManager.getUser(event.getPlayer().getUniqueId());
         BuildPlot buildPlot = (BuildPlot) user.getObject("plot");
+        if(buildPlot== null)
+            return;
         if(buildPlot.isInPlot(event.getBlock().getLocation())) {
             UserManager.getUser(event.getPlayer().getUniqueId()).addInt("blocksbroken",1);
 
