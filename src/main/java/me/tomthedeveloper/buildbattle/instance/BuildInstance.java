@@ -131,6 +131,10 @@ public class BuildInstance extends GameInstance {
 
     }
 
+    public void test(){
+        
+    }
+
 
     @Override
     public void run() {
