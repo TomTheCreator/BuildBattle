@@ -31,7 +31,7 @@ public class statsCommand implements CommandExecutor {
         player.sendMessage(ChatManager.getSingleMessage("STATS-Highest-Win",ChatColor.GREEN + "Highest win (points): " +ChatColor.YELLOW) + user.getInt("highestwin") );
         player.sendMessage(ChatManager.getSingleMessage("STATS-Blocks-Placed",ChatColor.GREEN + "Blocks Placed: " +ChatColor.YELLOW )+ user.getInt("blocksplaced") );
         player.sendMessage(ChatManager.getSingleMessage("STATS-Blocks-Broken",ChatColor.GREEN + "Blocks Broken: " +ChatColor.YELLOW )+ user.getInt("blocksbroken") );
-        player.sendMessage(ChatManager.getSingleMessage("STATS-Particles-Placed", ChatColor.GREEN + "Particles Placed: " + ChatColor.YELLOW + user.getInt("particles")));
+        player.sendMessage(ChatManager.getSingleMessage("STATS-Particles-Placed", ChatColor.GREEN + "Particles Placed: " + ChatColor.YELLOW) + user.getInt("particles"));
         player.sendMessage(ChatManager.getSingleMessage("STATS-Under-Line",ChatColor.BOLD + "--------------------"));
         return true;
     }

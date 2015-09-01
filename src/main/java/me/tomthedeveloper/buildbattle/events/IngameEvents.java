@@ -33,6 +33,7 @@ import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.world.StructureGrowEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 
@@ -89,10 +90,12 @@ public class IngameEvents implements Listener {
             return;
         if(buildInstance.getVotingPlot().getOwner() == event.getPlayer().getUniqueId()){
             event.getPlayer().sendMessage(ChatManager.getSingleMessage("Cant-Vote-On-Own-Plot", ChatColor.RED + "U can't vote on your own plot!!"));
+            event.setCancelled(true);
             return;
         }
         UserManager.getUser(event.getPlayer().getUniqueId()).setInt("points", VoteItems.getPoints(event.getItem()));
         event.getPlayer().sendMessage(ChatManager.getSingleMessage("Voted", ChatColor.GREEN + "Voted succesfully!"));
+        event.setCancelled(true);
     }
 
     @EventHandler
@@ -206,7 +209,9 @@ public class IngameEvents implements Listener {
 
         if(!event.getCurrentItem().getItemMeta().hasDisplayName())
             return;
-
+        ItemStack currentItem = event.getCurrentItem();
+        String displayName = event.getCurrentItem().getItemMeta().getDisplayName();
+        Player player = (Player) event.getWhoClicked();
         // if(event.getCurrentItem().getItemMeta().getDisplayName().equalsIgnoreCase(ChatManager.getSingleMessage("Ingame-Menu-Name", "Option Menu")))
          //   event.setCancelled(true);
 
@@ -224,44 +229,44 @@ public class IngameEvents implements Listener {
         BuildInstance buildInstance = (BuildInstance) gameInstance;
         if(buildInstance.getGameState() != GameState.INGAME)
             return;
-        if(event.getCurrentItem().getItemMeta().getDisplayName().equalsIgnoreCase(ChatManager.getSingleMessage("Particle-Option-Name", ChatColor.GREEN + "Particles"))) {
+        if(displayName.equalsIgnoreCase(ChatManager.getSingleMessage("Particle-Option-Name", ChatColor.GREEN + "Particles"))) {
             event.setCancelled(true);
             event.getWhoClicked().closeInventory();
-            ParticleMenu.openMenu((Player)event.getWhoClicked(), buildInstance.getPlotManager().getPlot((Player)event.getWhoClicked()));
+            ParticleMenu.openMenu(player, buildInstance.getPlotManager().getPlot((Player)event.getWhoClicked()));
             return;
         }
-
-        if(event.getInventory().getName().equalsIgnoreCase(ChatManager.getSingleMessage("Particle-Remove-Menu-Name", "Remove Particles"))) {
+        String inventoryName = event.getInventory().getName();
+        if(inventoryName.equalsIgnoreCase(ChatManager.getSingleMessage("Particle-Remove-Menu-Name", "Remove Particles"))) {
             event.setCancelled(true);
-            ParticleRemoveMenu.onClick(event.getInventory(), event.getCurrentItem(), buildInstance.getPlotManager().getPlot((Player) event.getWhoClicked()));
+            ParticleRemoveMenu.onClick(event.getInventory(), event.getCurrentItem(), buildInstance.getPlotManager().getPlot(player));
 
             return;
         }
-        if(event.getInventory().getName().equalsIgnoreCase(ChatManager.getSingleMessage("Player-Head-Main-Inventory-Name","Player Head Menu"))) {
+        if(inventoryName.equalsIgnoreCase(ChatManager.getSingleMessage("Player-Head-Main-Inventory-Name","Player Head Menu"))) {
             event.setCancelled(true);
-            PlayerHeadsMenu.onClickInMainMenu((Player)event.getWhoClicked(),event.getCurrentItem());
+            PlayerHeadsMenu.onClickInMainMenu(player,event.getCurrentItem());
 
             return;
         }
         if(PlayerHeadsMenu.getMenuNames().contains(event.getInventory().getName())){
             event.setCancelled(true);
-            PlayerHeadsMenu.onClickInDeeperMenu((Player) event.getWhoClicked(),event.getCurrentItem(),event.getInventory().getName());
+            PlayerHeadsMenu.onClickInDeeperMenu(player,event.getCurrentItem(),event.getInventory().getName());
             return;
         }
-        if(event.getCurrentItem().getItemMeta().getDisplayName().equalsIgnoreCase(ChatManager.getSingleMessage("Heads-Option-Name", ChatColor.GREEN + "Particles"))) {
+        if(displayName.equalsIgnoreCase(ChatManager.getSingleMessage("Heads-Option-Name", ChatColor.GREEN + "Particles"))) {
 
             event.setCancelled(true);
-            PlayerHeadsMenu.openMenu((Player) event.getWhoClicked());
+            PlayerHeadsMenu.openMenu(player);
         }
-        if(event.getInventory().getName().equalsIgnoreCase(ChatManager.getSingleMessage("Particle-Menu-Name", "Particle Menu"))){
+        if(inventoryName.equalsIgnoreCase(ChatManager.getSingleMessage("Particle-Menu-Name", "Particle Menu"))){
 
-            if(event.getCurrentItem().getItemMeta().getDisplayName().contains(ChatManager.getSingleMessage("Remove-Particle-Item-Name" ,ChatColor.RED + "Remove Particles"))) {
+            if(displayName.contains(ChatManager.getSingleMessage("Remove-Particle-Item-Name" ,ChatColor.RED + "Remove Particles"))) {
                 event.setCancelled(true);
                 event.getWhoClicked().closeInventory();
-                ParticleRemoveMenu.openMenu((Player)event.getWhoClicked(), buildInstance.getPlotManager().getPlot((Player)event.getWhoClicked()));
+                ParticleRemoveMenu.openMenu(player, buildInstance.getPlotManager().getPlot((Player)event.getWhoClicked()));
                 return;
             }
-            ParticleMenu.onClick((Player) event.getWhoClicked(),event.getCurrentItem(),buildInstance.getPlotManager().getPlot((Player) event.getWhoClicked()));
+            ParticleMenu.onClick(player,event.getCurrentItem(),buildInstance.getPlotManager().getPlot((Player) event.getWhoClicked()));
 
             event.setCancelled(true);
         }
@@ -300,14 +305,14 @@ public class IngameEvents implements Listener {
             event.setCancelled(true);
             return;
         }
-        if(event.getCurrentItem().getItemMeta().getDisplayName().equalsIgnoreCase(ChatManager.getSingleMessage("Floor-Option-Name", ChatColor.GREEN + "Floor Material"))){
-            buildInstance.getPlotManager().getPlot((Player)event.getWhoClicked()).changeFloor(event.getCursor().getType(), event.getCursor().getData().getData());
-            event.getWhoClicked().sendMessage(ChatManager.getSingleMessage("Floor-Changed", ChatColor.GREEN + "Floor changed!"));
+        if(displayName.equalsIgnoreCase(ChatManager.getSingleMessage("Floor-Option-Name", ChatColor.GREEN + "Floor Material"))){
+            buildInstance.getPlotManager().getPlot(player).changeFloor(event.getCursor().getType(), event.getCursor().getData().getData());
+            player.sendMessage(ChatManager.getSingleMessage("Floor-Changed", ChatColor.GREEN + "Floor changed!"));
             event.getCursor().setAmount(0);
             event.getCursor().setType(Material.AIR);
             event.getCurrentItem().setType(Material.AIR);
-            ((Player)event.getWhoClicked()).closeInventory();
-            for(Entity entity:event.getWhoClicked().getNearbyEntities(5,5,5)){
+            player.closeInventory();
+            for(Entity entity:player.getNearbyEntities(5,5,5)){
                 if(entity.getType() == EntityType.DROPPED_ITEM){
                     entity.remove();
                 }
@@ -392,7 +397,7 @@ public class IngameEvents implements Listener {
             for (GameInstance gameInstance : plugin.getGameInstanceManager().getGameInstances()) {
                 BuildInstance buildInstance = (BuildInstance) gameInstance;
                 for(BuildPlot buildplot: buildInstance.getPlotManager().getPlots()){
-                    if (buildplot.isInPlotRange(event.getEntity().getLocation(),1))
+                    if (buildplot.isInPlotRange(event.getEntity().getLocation(),10))
                         event.setCancelled(true);
                 }
             }
@@ -444,7 +449,7 @@ public class IngameEvents implements Listener {
         }
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH)
      public void onBreak(BlockBreakEvent event){
         GameInstance gameInstance = plugin.getGameInstanceManager().getGameInstance(event.getPlayer());
         if(gameInstance == null)
@@ -454,17 +459,21 @@ public class IngameEvents implements Listener {
             return;
         }
         BuildInstance buildInstance = (BuildInstance) gameInstance;
+        if(buildInstance.isVoting()){
+            event.setCancelled(true);
+            return;
+        }
         if(buildInstance.getBlacklist().contains(event.getBlock().getTypeId())) {
             event.setCancelled(true);
             return;
         }
-        if(buildInstance.isVoting()){
-            event.setCancelled(true);
-        }
+
         User user = UserManager.getUser(event.getPlayer().getUniqueId());
         BuildPlot buildPlot = (BuildPlot) user.getObject("plot");
-        if(buildPlot== null)
+        if(buildPlot== null) {
+            event.setCancelled(true);
             return;
+        }
         if(buildPlot.isInPlot(event.getBlock().getLocation())) {
             UserManager.getUser(event.getPlayer().getUniqueId()).addInt("blocksbroken",1);
 
@@ -473,7 +482,7 @@ public class IngameEvents implements Listener {
         event.setCancelled(true);
     }
 
-    @EventHandler
+    @EventHandler(priority = EventPriority.HIGH)
     public void onPlace(BlockPlaceEvent event){
         GameInstance gameInstance = plugin.getGameInstanceManager().getGameInstance(event.getPlayer());
         if(gameInstance == null)
@@ -492,6 +501,10 @@ public class IngameEvents implements Listener {
         }
         User user = UserManager.getUser(event.getPlayer().getUniqueId());
         BuildPlot buildPlot = (BuildPlot) user.getObject("plot");
+        if(buildPlot== null) {
+            event.setCancelled(true);
+            return;
+        }
         if(buildPlot.isInPlot(event.getBlock().getLocation())){
             UserManager.getUser(event.getPlayer().getUniqueId()).addInt("blocksplaced",1);
             return;

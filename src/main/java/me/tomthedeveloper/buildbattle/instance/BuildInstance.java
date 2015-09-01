@@ -65,7 +65,7 @@ public class BuildInstance extends GameInstance {
         if (!ConfigPreferences.isDynamicSignSystemEnabled()) {
             return true;
         } else {
-            if (((getGameState() == GameState.STARTING && getTimer() >= 15) || getGameState() == GameState.WAITING_FOR_PLAYERS)) {
+            if (((getGameState() == GameState.STARTING && getTimer() >= 3) || getGameState() == GameState.WAITING_FOR_PLAYERS)) {
                 return true;
             } else {
                 return false;
@@ -132,7 +132,7 @@ public class BuildInstance extends GameInstance {
     }
 
     public void test(){
-        
+
     }
 
 
@@ -262,6 +262,7 @@ public class BuildInstance extends GameInstance {
                         }
                         calculateResults();
                         announceResults();
+                        giveRewards();
                         BuildPlot winnerPlot = getPlotManager().getPlot(toplist.get(1));
 
                         for (Player player : getPlayers()) {
@@ -279,6 +280,9 @@ public class BuildInstance extends GameInstance {
             case ENDING:
                 setVoting(false);
                 setTimer(getTimer() - 1);
+                for(Player player:getPlayers()){
+                    Util.spawnRandomFirework(player.getLocation());
+                }
                 if (getTimer() == 0) {
 
                     teleportAllToEndLocation();
@@ -286,6 +290,7 @@ public class BuildInstance extends GameInstance {
                     for (Player player : getPlayers()) {
                         player.getInventory().clear();
                         UserManager.getUser(player.getUniqueId()).removeScoreboard();
+                        player.setGameMode(GameMode.SURVIVAL);
                         player.setFlying(false);
                         player.setAllowFlight(false);
                         UserManager.getUser(player.getUniqueId()).addInt("gamesplayed", 1);
@@ -311,7 +316,11 @@ public class BuildInstance extends GameInstance {
                 if (plugin.isBungeeActivated() && ConfigPreferences.getBungeeShutdown()) {
                     plugin.getServer().shutdown();
                 }
+                if(ConfigPreferences.restartOnEnd() && plugin.isBungeeActivated()){
+                    plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(),"restart");
+                }
                 setGameState(GameState.WAITING_FOR_PLAYERS);
+                toplist.clear();
         }
     }
 
@@ -348,6 +357,45 @@ public class BuildInstance extends GameInstance {
 
 
         }
+    }
+
+    public void giveRewards(){
+        if(ConfigPreferences.isWinCommandsEnabled()) {
+            for (String string : ConfigPreferences.getWinCommands()) {
+                plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), string.replaceAll("%PLAYER%", plugin.getServer().getOfflinePlayer(toplist.get(1)).getName()));
+            }
+        }
+        if(ConfigPreferences.isSecondPlaceCommandsEnabled()) {
+            if (toplist.get(2) != null) {
+                for (String string : ConfigPreferences.getSecondPlaceCommands()) {
+                    plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), string.replaceAll("%PLAYER%", plugin.getServer().getOfflinePlayer(toplist.get(2)).getName()));
+                }
+            }
+        }
+        if(ConfigPreferences.isThirdPlaceCommandsEnabled()) {
+            if (toplist.get(3) != null) {
+                for (String string : ConfigPreferences.getThirdPlaceCommands()) {
+                    plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), string.replaceAll("%PLAYER%", plugin.getServer().getOfflinePlayer(toplist.get(3)).getName()));
+                }
+            }
+        }
+        if(ConfigPreferences.isEndGameCommandsEnabled()) {
+            for (String string : ConfigPreferences.getEndGameCommands()) {
+                for (Player player : getPlayers()) {
+                    plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), string.replaceAll("%PLAYER%", player.getName())
+                            .replaceAll("%RANG%", Integer.toString(getRang(player))));
+                }
+            }
+        }
+    }
+
+    public Integer getRang(Player player){
+        for(int i:toplist.keySet()) {
+            if (toplist.get(i).equals(player.getUniqueId())){
+                return i;
+            }
+        }
+        return 0;
     }
 
 
@@ -458,7 +506,6 @@ public class BuildInstance extends GameInstance {
         p.setFoodLevel(20);
         p.getInventory().setArmorContents(new ItemStack[]{new ItemStack(Material.AIR), new ItemStack(Material.AIR), new ItemStack(Material.AIR), new ItemStack(Material.AIR)});
         p.getInventory().clear();
-        p.setGameMode(GameMode.CREATIVE);
         showPlayers();
         if (!UserManager.getUser(p.getUniqueId()).isSpectator())
             getChatManager().broadcastJoinMessage(p);
@@ -515,7 +562,7 @@ public class BuildInstance extends GameInstance {
             if (queue.isEmpty() && getPlotManager().getPlot(player.getUniqueId()) == null) {
                 setVotingPlot(null);
             } else {
-                getPlotManager().teleportAllToPlot(plotManager.getPlot(player.getUniqueId()));
+               // getPlotManager().teleportAllToPlot(plotManager.getPlot(player.getUniqueId()));
                 setVotingPlot(plotManager.getPlot(player.getUniqueId()));
                 for (Player player1 : getPlayers()) {
                     player1.teleport(getVotingPlot().getTeleportLocation());

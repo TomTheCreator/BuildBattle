@@ -98,11 +98,12 @@ public class BuildBattle extends GameAPI {
         ChatManager.getFromLanguageConfig("STATS-Wins",ChatColor.GREEN + "Wins: " +ChatColor.YELLOW);
         ChatManager.getFromLanguageConfig("STATS-Loses",ChatColor.GREEN + "Loses: " +ChatColor.YELLOW);
         ChatManager.getFromLanguageConfig("STATS-Games-Played",ChatColor.GREEN + "Games played: " +ChatColor.YELLOW);
-        ChatManager.getFromLanguageConfig("STATS-Hihgest-Win",ChatColor.GREEN + "Highest win: " +ChatColor.YELLOW);
-        ChatManager.getFromLanguageConfig("STATS-BLocks-Placed",ChatColor.GREEN + "Blocks Placed: " +ChatColor.YELLOW );
+        ChatManager.getFromLanguageConfig("STATS-Highest-Win",ChatColor.GREEN + "Highest win: " +ChatColor.YELLOW);
+        ChatManager.getFromLanguageConfig("STATS-Blocks-Placed",ChatColor.GREEN + "Blocks Placed: " +ChatColor.YELLOW );
         ChatManager.getFromLanguageConfig("STATS-Blocks-Broken",ChatColor.GREEN + "Blocks Broken: " +ChatColor.YELLOW);
-        ChatManager.getFromLanguageConfig("STATS-Next-Level-Exp",ChatColor.GREEN + "Next Level Exp " + ChatColor.YELLOW);
+        ChatManager.getFromLanguageConfig("STATS-Particles-Placed", ChatColor.GREEN + "Particles Placed: " + ChatColor.YELLOW);
         ChatManager.getFromLanguageConfig("STATS-UnderLinen",ChatColor.BOLD + "--------------------");
+        ChatManager.getFromLanguageConfig("Heads-Option-Lore", ChatColor.GRAY + "Open for heads menu!");
     }
 
 
@@ -115,7 +116,12 @@ public class BuildBattle extends GameAPI {
         new ConfigPreferences(this);
         ConfigPreferences.loadOptions();
         ConfigPreferences.loadOptions();
-
+        ConfigPreferences.loadThemes();
+        ConfigPreferences.loadBlackList();
+        ConfigPreferences.loadWinCommands();
+        ConfigPreferences.loadSecondPlaceCommands();
+        ConfigPreferences.loadThirdPlaceCommands();
+        ConfigPreferences.loadEndGameCommands();
         ParticleMenu.loadFromConfig();
         PlayerHeadsMenu.loadHeadItems();
         loadInstances();
@@ -261,6 +267,12 @@ public class BuildBattle extends GameAPI {
         if( strings.length ==1&&strings[0].equalsIgnoreCase("reload") ){
             ConfigPreferences.loadOptions();
             ConfigPreferences.loadOptions();
+            ConfigPreferences.loadThemes();
+            ConfigPreferences.loadBlackList();
+            ConfigPreferences.loadWinCommands();
+            ConfigPreferences.loadSecondPlaceCommands();
+            ConfigPreferences.loadThirdPlaceCommands();
+            ConfigPreferences.loadEndGameCommands();
             this.loadInstances();
             player.sendMessage(ChatColor.GREEN + "Plugin reloaded!");
         }
@@ -279,6 +291,7 @@ public class BuildBattle extends GameAPI {
 
     @Override
     public void loadInstances(){
+        this.saveConfig();
         if(getGameInstanceManager().getGameInstances() != null) {
             if (getGameInstanceManager().getGameInstances().size() > 0) {
                 for (GameInstance gameInstance : this.getGameInstanceManager().getGameInstances()) {
@@ -393,7 +406,7 @@ public class BuildBattle extends GameAPI {
                 public void run() {
                     boolean b = false;
                     MySQLDatabase database = getMySQLDatabase();
-                    ResultSet resultSet = database.executeQuery("SELECT UUID from playerstats WHERE UUID='"+playername+"'");
+                    ResultSet resultSet = database.executeQuery("SELECT UUID from buildbattlestats WHERE UUID='"+playername+"'");
                     try {
                         if(!resultSet.next()) {
                             database.insertPlayer(playername);

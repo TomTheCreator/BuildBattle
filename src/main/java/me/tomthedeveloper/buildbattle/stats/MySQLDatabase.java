@@ -25,13 +25,15 @@ public class MySQLDatabase {
                 return;
             }
 
-            connection.createStatement().executeUpdate("CREATE TABLE IF NOT EXISTS `playerstats` (\n" +
+            connection.createStatement().executeUpdate("CREATE TABLE IF NOT EXISTS `buildbattlestats` (\n" +
                     "  `UUID` text NOT NULL,\n" +
                     "  `loses` int(11) NOT NULL DEFAULT '0',\n" +
+                    "  `wins` int(11) NOT NULL DEFAULT '0',\n" +
                     "  `highestwin` int(11) NOT NULL DEFAULT '0',\n" +
+                    "  `gamesplayed` int(11) NOT NULL DEFAULT '0',\n" +
                     "  `blocksbroken` int(11) NOT NULL DEFAULT '0',\n" +
                     "  `blocksplaced` int(11) NOT NULL DEFAULT '0',\n" +
-                    "  `wins` int(11) NOT NULL DEFAULT '0',\n" +
+                    "  `particles` int(11) NOT NULL DEFAULT '0'\n" +
                     ");");
             manager.closeConnection(connection);
         } catch (SQLException e) {
@@ -69,7 +71,7 @@ public class MySQLDatabase {
     }
 
     public void insertPlayer(String UUID){
-        executeUpdate("INSERT INTO playerstats (UUID,xp) VALUES ('"+UUID+"',0)");
+        executeUpdate("INSERT INTO `buildbattlestats` (UUID,gamesplayed) VALUES ('"+UUID+"',0)");
     }
 
     public void closeDatabase(){
@@ -82,15 +84,15 @@ public class MySQLDatabase {
     }
 
     public void addStat(String UUID, String stat, int amount){
-        executeUpdate("UPDATE playerstats SET "+stat+"="+stat+"+"+amount+" WHERE UUID='"+UUID+"'");
+        executeUpdate("UPDATE `buildbattlestats` SET "+stat+"="+stat+"+"+amount+" WHERE UUID='"+UUID+"'");
     }
 
     public void setStat(String UUID, String stat, int number){
-        executeUpdate("UPDATE playerstats SET "+stat+"="+number+" WHERE UUID='"+UUID+"';");
+        executeUpdate("UPDATE `buildbattlestats` SET "+stat+"="+number+" WHERE UUID='"+UUID+"';");
     }
 
     public int getStat(String UUID, String stat){
-        ResultSet set = executeQuery("SELECT "+stat+" FROM playerstats WHERE UUID='"+UUID+"'");
+        ResultSet set = executeQuery("SELECT "+stat+" FROM `buildbattlestats` WHERE UUID='"+UUID+"'");
         try {
             if(!set.next())
                 return 0;

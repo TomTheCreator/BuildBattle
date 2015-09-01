@@ -65,7 +65,7 @@ public class IngameMenu implements Listener {
         playerheadoption.setData((byte) SkullType.PLAYER.ordinal());
         playerheadoption.setDisplayname(ChatManager.getSingleMessage("Heads-Option-Name", ChatColor.GREEN + "Heads"));
         List<String> playerheadlore = new ArrayList<String>();
-        playerheadlore.add(ChatManager.getSingleMessage("Coming-Soon", "Coming Soon"));
+        playerheadlore.add(ChatManager.getSingleMessage("Heads-Option-Lore", ChatColor.GRAY + "Open for heads menu!"));
         playerheadoption.setLore(playerheadlore);
         iconMenu.addOption(playerheadoption.getItemStack(), 11);
         return iconMenu;

@@ -91,12 +91,13 @@ public class PlotManager {
     }
 
     public void teleportAllToPlot(BuildPlot buildPlot){
-                Location tploc = buildPlot.getCenter();
+                Location tploc = buildPlot.getTeleportLocation();
                 while(tploc.getBlock().getType() != Material.AIR) {
                     tploc = tploc.add(0, 1, 0);
                 }
                 for(Player player:buildInstance.getPlayers()) {
-                    Bukkit.getServer().getPlayer(buildPlot.getOwner()).teleport(player);
+                  //  Bukkit.getServer().getPlayer(buildPlot.getOwner()).teleport(player);
+                    player.teleport(tploc);
                     player.setGameMode(GameMode.CREATIVE);
                     player.setAllowFlight(true);
                     player.setFlying(true);

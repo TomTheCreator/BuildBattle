@@ -18,6 +18,12 @@ public class ConfigPreferences {
     private static FileConfiguration config = ConfigurationManager.getConfig("config");
     private static HashMap<String,Integer>  options = new HashMap<String, Integer>();
     private static BuildBattle buildBattle;
+    private static List<String> winCommands = new ArrayList<String>();
+    private static List<String> endGameCommands = new ArrayList<String>();
+    private static List<String> secondPlaceCommands = new ArrayList<String>();
+
+    private static List<String> thirdPlaceCommands = new ArrayList<String>();
+
 
     public ConfigPreferences(BuildBattle buildBattle){
         config = buildBattle.getConfig();
@@ -32,6 +38,65 @@ public class ConfigPreferences {
         }
         for(String theme:config.getStringList("themes")){
             BuildInstance.addTheme(theme);
+        }
+
+    }
+
+    public static void loadWinCommands(){
+        if(!config.contains("Win-Commands")){
+            config.set("Win-Commands", Arrays.asList(new String[]{"say %PLAYER% won the game!", "give %PLAYER% 1000"}));
+            saveConfig();
+        }
+        for(String command:config.getStringList("Win-Commands")){
+            winCommands.add(command);
+        }
+
+    }
+
+    public static void loadThirdPlaceCommands(){
+        if(!config.contains("Third-Place-Commands")){
+            config.set("Third-Place-Commands", Arrays.asList(new String[]{"say %PLAYER% became third", "give %PLAYER% 1000"}));
+            saveConfig();
+        }
+        for(String command:config.getStringList("Third-Place-Commands")){
+            thirdPlaceCommands.add(command);
+        }
+
+    }
+    public static void loadSecondPlaceCommands(){
+        if(!config.contains("Second-Place-Commands")){
+            config.set("Second-Place-Commands", Arrays.asList(new String[]{"say %PLAYER% become second", "give %PLAYER% 1000"}));
+            saveConfig();
+        }
+        for(String command:config.getStringList("Second-Place-Commands")){
+            secondPlaceCommands.add(command);
+        }
+
+    }
+
+    public static List<String> getSecondPlaceCommands(){
+        return secondPlaceCommands;
+    }
+
+    public static List<String> getThirdPlaceCommands(){
+        return thirdPlaceCommands;
+    }
+    public static List<String> getWinCommands(){
+        return winCommands;
+    }
+
+    public static List<String> getEndGameCommands(){
+        return endGameCommands;
+    }
+
+
+    public static void loadEndGameCommands(){
+        if(!config.contains("End-Game-Commands")){
+            config.set("End-Game-Commands", Arrays.asList(new String[]{"say %PLAYER% has played a game!", "give %PLAYER% 100"}));
+            saveConfig();
+        }
+        for(String command:config.getStringList("End-Game-Commands")){
+            endGameCommands.add(command);
         }
 
     }
@@ -74,6 +139,9 @@ public class ConfigPreferences {
     }
 
 
+    public static boolean restartOnEnd(){
+        return options.get("Bungee-Restart-On-End")==1;
+    }
 
     public static int getVotingTime(){
         return options.get("Voting-Time-In-Seconds");
@@ -91,9 +159,21 @@ public class ConfigPreferences {
         return options.get("Particle-Offset");
     }
 
+    public static boolean isWinCommandsEnabled(){
+        return options.get("Win-Commands-Activated")==1;
+    }
+
+    public static boolean isSecondPlaceCommandsEnabled(){
+        return options.get("Second-Place-Commands-Activated")==1;
+    }
+    public static boolean isThirdPlaceCommandsEnabled(){
+        return options.get("Third-Place-Commands-Activated")==1;
+    }
+    public static boolean isEndGameCommandsEnabled(){
+        return options.get("End-Game-Commands-Activated")==1;
+    }
     public static void loadOptions(){
-        loadThemes();
-        loadBlackList();
+
         List<String> loadOptions = new ArrayList<String>();
         loadOptions.add("Build-Time-In-Seconds");
         loadOptions.add("Voting-Time-In-Seconds");
@@ -106,7 +186,13 @@ public class ConfigPreferences {
         loadOptions.add("Max-Amount-Particles");
         loadOptions.add("Particle-Refresh-Per-Tick");
         loadOptions.add("Bungee-Shutdown-On-End");
+        loadOptions.add("Bungee-Restart-On-End");
         loadOptions.add("Particle-Offset");
+        loadOptions.add("Win-Commands-Activated");
+        loadOptions.add("End-Game-Commands-Activated");
+        loadOptions.add("Second-Place-Commands-Activated");
+        loadOptions.add("Third-Place-Commands-Activated");
+
         for(String option:loadOptions){
             if(config.contains(option)) {
                 if(config.isBoolean(option)){
@@ -144,6 +230,16 @@ public class ConfigPreferences {
                     config.set("Bungee-Shutdown-On-End",false);
                 if(option.equals("Particle-Offset"))
                     config.set("Particle-Offset",1);
+                if(option.equals("Win-Commands-Activated"))
+                    config.set("Win-Commands-Activated",false);
+                if(option.equals("Second-Place-Commands-Activated"))
+                    config.set("Second-Place-Commands-Activated",false);
+                if(option.equals("Third-Place-Commands-Activated"))
+                    config.set("Third-Place-Commands-Activated",false);
+                if(option.equals("End-Game-Commands-Activated"))
+                    config.set("End-Game-Commands-Activated",true);
+                if(option.equals("Bungee-Restart-On-End"))
+                    config.set("Bungee-Restart-On-End",false);
                 saveConfig();
         }
             saveConfig();

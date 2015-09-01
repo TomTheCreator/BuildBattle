@@ -139,11 +139,12 @@ public class NormalEvents implements Listener {
             public void run() {
                 boolean b = false;
                 MySQLDatabase database = plugin.getMySQLDatabase();
-                ResultSet resultSet = database.executeQuery("SELECT UUID from playerstats WHERE UUID='"+playername+"'");
+                ResultSet resultSet = database.executeQuery("SELECT UUID from buildbattlestats WHERE UUID='"+playername+"'");
                 try {
                     if(!resultSet.next()) {
                         database.insertPlayer(playername);
                         b = true;
+                        return;
                     }
 
                     int gamesplayed = 0;
@@ -179,6 +180,7 @@ public class NormalEvents implements Listener {
                         if(!resultSet.next()) {
                             database.insertPlayer(playername);
                             b = true;
+                            return;
                         }
 
                         int gamesplayed = 0;
