@@ -115,7 +115,7 @@ public class ConfigPreferences {
 
     public static void loadBlackList(){
         if(!config.contains("blacklist")){
-            config.set("blacklist", Arrays.asList(new int[]{46, 57}));
+            config.set("blacklist", Arrays.asList(new Integer[]{46, 57}));
             saveConfig();
         }
         for(int ID:config.getIntegerList("blacklist")){
@@ -128,6 +128,10 @@ public class ConfigPreferences {
         if(options.get("bar")==1)
             return true;
         return false;
+    }
+
+    public  static boolean isHidePlayersOutsideGameEnabled(){
+        return options.get("Hide-Players-Outside-Game")==1;
     }
 
     public static int getAmountFromOneParticle(){
@@ -147,6 +151,10 @@ public class ConfigPreferences {
         return options.get("Voting-Time-In-Seconds");
     }
 
+    public static boolean isScoreboardDisabled(){
+        return options.get("Disable-Scoreboard-Ingame") == 1;
+    }
+
     public static int getBuildTime(){
         return options.get("Build-Time-In-Seconds");
     }
@@ -158,10 +166,15 @@ public class ConfigPreferences {
     public static int getParticlOffset(){
         return options.get("Particle-Offset");
     }
+    public static int getMaxMobs(){
+        return options.get("Mobs-Max-Amount-Per-Plot");
+    }
 
     public static boolean isWinCommandsEnabled(){
         return options.get("Win-Commands-Activated")==1;
     }
+
+    public static boolean isNameUsedInDatabase(){return options.get("Use-Name-Instead-Of-UUID-In-Database")==1;}
 
     public static boolean isSecondPlaceCommandsEnabled(){
         return options.get("Second-Place-Commands-Activated")==1;
@@ -192,6 +205,10 @@ public class ConfigPreferences {
         loadOptions.add("End-Game-Commands-Activated");
         loadOptions.add("Second-Place-Commands-Activated");
         loadOptions.add("Third-Place-Commands-Activated");
+        loadOptions.add("Use-Name-Instead-Of-UUID-In-Database");
+        loadOptions.add("Mobs-Max-Amount-Per-Plot");
+        loadOptions.add("Hide-Players-Outside-Game");
+        loadOptions.add("Disable-Scoreboard-Ingame");
 
         for(String option:loadOptions){
             if(config.contains(option)) {
@@ -240,11 +257,21 @@ public class ConfigPreferences {
                     config.set("End-Game-Commands-Activated",true);
                 if(option.equals("Bungee-Restart-On-End"))
                     config.set("Bungee-Restart-On-End",false);
+                if(option.equals("Use-Name-Instead-Of-UUID-In-Database"))
+                    config.set("Use-Name-Instead-Of-UUID-In-Database",false);
+                if(option.equals("Mobs-Max-Amount-Per-Plot"))
+                    config.set("Mobs-Max-Amount-Per-Plot",20);
+                if(option.equals("Hide-Players-Outside-Game"))
+                    config.set("Hide-Players-Outside-Game",true);
+                if(option.equals("Disable-Scoreboard-Ingame"))
+                    config.set("Disable-Scoreboard-Ingame", false);
                 saveConfig();
         }
             saveConfig();
         }
     }
+
+
 
     public static long getParticleRefreshTick(){
         return options.get("Particle-Refresh-Per-Tick");

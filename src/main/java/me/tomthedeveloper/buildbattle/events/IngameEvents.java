@@ -27,8 +27,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.*;
-import org.bukkit.event.entity.CreatureSpawnEvent;
-import org.bukkit.event.entity.EntityExplodeEvent;
+import org.bukkit.event.entity.*;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.player.*;
 import org.bukkit.event.world.StructureGrowEvent;
@@ -49,6 +48,8 @@ public class IngameEvents implements Listener {
         this.plugin = buildBattle;
 
     }
+
+
 
     @EventHandler
     public void onJoin(PlayerJoinEvent event){
@@ -137,6 +138,17 @@ public class IngameEvents implements Listener {
     }
 
     @EventHandler
+    public void onFoodChange(FoodLevelChangeEvent event){
+        if(!(event.getEntity().getType() == EntityType.PLAYER))
+            return;
+        Player player = (Player) event.getEntity();
+        if(plugin.getGameInstanceManager().getGameInstance(player)==null)
+            return;
+        GameInstance gameInstance = plugin.getGameInstanceManager().getGameInstance(player);
+        event.setCancelled(true);
+    }
+
+    @EventHandler
     public void onWaterFlowEvent(BlockFromToEvent event){
         for(GameInstance gameInstance:plugin.getGameInstanceManager().getGameInstances()){
             BuildInstance buildInstance = (BuildInstance) gameInstance;
@@ -158,6 +170,7 @@ public class IngameEvents implements Listener {
 
                 if(buildPlot.isInPlotRange(event.getEntity().getLocation(),0)) {
                     event.blockList().clear();
+                    event.setCancelled(true);
                 }else if(buildPlot.isInPlotRange(event.getEntity().getLocation(),5)){
                     event.getEntity().getLocation().getBlock().setType(Material.TNT);
                     event.blockList().clear();
@@ -166,6 +179,30 @@ public class IngameEvents implements Listener {
             }
         }
     }
+
+    @EventHandler
+    public void onEntityDamageEntity(EntityDamageByEntityEvent event){
+        if(event.getEntity().getType() != EntityType.PLAYER)
+            return;
+        Player player = (Player) event.getEntity();
+        GameInstance gameInstance = plugin.getGameInstanceManager().getGameInstance(player);
+        if(gameInstance == null)
+            return;
+        event.setCancelled(true);
+    }
+
+    @EventHandler
+    public void onDamage(EntityDamageEvent event){
+        if(event.getEntity().getType() != EntityType.PLAYER)
+            return;
+        Player player = (Player) event.getEntity();
+        GameInstance gameInstance = plugin.getGameInstanceManager().getGameInstance(player);
+        if(gameInstance == null)
+            return;
+        event.setCancelled(true);
+    }
+
+
 
     @EventHandler
     public void onTreeGrow(StructureGrowEvent event){
@@ -189,7 +226,7 @@ public class IngameEvents implements Listener {
             BuildInstance buildInstance = (BuildInstance) gameInstance;
             for(BuildPlot buildPlot:buildInstance.getPlotManager().getPlots()){
 
-                    if(!buildPlot.isInPlotRange(event.getBlock().getLocation(),-1)){
+                    if(!buildPlot.isInPlotRange(event.getBlock().getLocation(),-1) && buildPlot.isInPlotRange(event.getBlock().getLocation(),5)){
                         event.setCancelled(true);
                     }
                 }
@@ -301,6 +338,9 @@ public class IngameEvents implements Listener {
                 || event.getCursor().getType() == Material.SIGN_POST
                 || event.getCursor().getType() == Material.WALL_SIGN
                 || event.getCursor().getType() == Material.CACTUS
+                || event.getCursor().getType() == Material.ENDER_CHEST
+                || event.getCursor().getType() == Material.PISTON_BASE
+
                 ||event.getCursor().getType() == Material.TNT || event.getCursor().getType() == Material.AIR) {
             event.setCancelled(true);
             return;
@@ -498,6 +538,7 @@ public class IngameEvents implements Listener {
         }
         if(buildInstance.isVoting()){
             event.setCancelled(true);
+            return;
         }
         User user = UserManager.getUser(event.getPlayer().getUniqueId());
         BuildPlot buildPlot = (BuildPlot) user.getObject("plot");

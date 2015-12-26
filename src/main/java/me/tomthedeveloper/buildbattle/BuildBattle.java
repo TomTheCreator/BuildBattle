@@ -246,7 +246,6 @@ public class BuildBattle extends GameAPI {
             }else{
                 player.sendMessage(ChatColor.RED + "U don't have the right selection!");
             }
-
             return true;
         }
         if( strings.length ==1&&strings[0].equalsIgnoreCase("forcestart") ){

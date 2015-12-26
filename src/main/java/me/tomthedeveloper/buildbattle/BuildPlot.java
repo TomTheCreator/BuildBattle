@@ -172,6 +172,32 @@ public class BuildPlot {
 
     }
 
+    public boolean isInFloor(Location location){
+        boolean trueOrNot = false;
+        if(getMAXPOINT().getY() > getMINPOINT().getY()) {
+            if (location.getWorld() == getMINPOINT().getWorld() && location.getWorld() == getMAXPOINT().getWorld()) {
+                if (location.getX() >= getMINPOINT().getX() && location.getX() <= getMAXPOINT().getX()) {
+                    if (location.getY() == getMINPOINT().getY()) {
+                        if (location.getZ() >= getMINPOINT().getZ()
+                                && location.getZ() <= getMAXPOINT().getZ()) {
+                            trueOrNot = true;
+                        }
+                    }
+                }
+            } else {
+                if (location.getX() <= getMINPOINT().getX() && location.getX() >= getMAXPOINT().getX()) {
+                    if (location.getY() == getMAXPOINT().getY()) {
+                        if (location.getZ() <= getMINPOINT().getZ()
+                                && location.getZ() >= getMAXPOINT().getZ()) {
+                            trueOrNot = true;
+                        }
+                    }
+                }
+            }
+        }
+        return trueOrNot;
+    }
+
     public void changeFloor(Material material, byte data){
         if(material == Material.WATER_BUCKET)
             material = Material.WATER;

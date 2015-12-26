@@ -169,7 +169,11 @@ public class HeadsItem {
 
             }
             if (itemStack.getType() == Material.SKULL_ITEM && itemStack.getData().getData() == SkullType.PLAYER.ordinal()) {
-                itemStack = Items.getPlayerHead(Bukkit.getOfflinePlayer(getOwner()));
+                if(getOwner().matches("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[34][0-9a-fA-F]{3}-[89ab][0-9a-fA-F]{3}-[0-9a-fA-F]{12}")){
+                    itemStack = Items.getPlayerHead(Bukkit.getOfflinePlayer(UUID.fromString(getOwner())));
+                }else {
+                    itemStack = Items.getPlayerHead(Bukkit.getOfflinePlayer(getOwner()));
+                }
             }
             Util.setItemNameAndLore(itemStack, ChatFormatter.formatMessage(this.getDisplayName()), getLore().toArray(new String[getLore().size()]));
 

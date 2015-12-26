@@ -6,8 +6,12 @@ import me.TomTheDeveloper.Handlers.ChatManager;
 import me.TomTheDeveloper.Handlers.MessageHandler;
 import me.TomTheDeveloper.Handlers.UserManager;
 import me.TomTheDeveloper.User;
+import me.TomTheDeveloper.Utils.ArmorHelper;
 import me.TomTheDeveloper.Utils.Util;
 import me.tomthedeveloper.buildbattle.*;
+import me.tomthedeveloper.buildbattle.SelfMadeEvents.GameChangeStateEvent;
+import me.tomthedeveloper.buildbattle.SelfMadeEvents.GameEndEvent;
+import me.tomthedeveloper.buildbattle.SelfMadeEvents.GameStartEvent;
 import me.tomthedeveloper.buildbattle.menu.IngameMenu;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
@@ -37,6 +41,7 @@ public class BuildInstance extends GameInstance {
     private int extracounter;
     private BuildPlot votingPlot = null;
     private boolean votetime;
+    private boolean scoreboardDisabled = ConfigPreferences.isScoreboardDisabled();
 
     public BuildInstance(String ID) {
         super(ID);
@@ -65,7 +70,7 @@ public class BuildInstance extends GameInstance {
         if (!ConfigPreferences.isDynamicSignSystemEnabled()) {
             return true;
         } else {
-            if (((getGameState() == GameState.STARTING && getTimer() >= 3) || getGameState() == GameState.WAITING_FOR_PLAYERS)) {
+            if (getGameState() == GameState.STARTING || getGameState() == GameState.WAITING_FOR_PLAYERS) {
                 return true;
             } else {
                 return false;
@@ -105,6 +110,7 @@ public class BuildInstance extends GameInstance {
         p.setFoodLevel(20);
         p.setFlying(false);
         p.setAllowFlight(false);
+        ArmorHelper.clearArmor(p);
         p.getInventory().clear();
         for (PotionEffect effect : p.getActivePotionEffects()) {
             p.removePotionEffect(effect.getType());
@@ -138,7 +144,8 @@ public class BuildInstance extends GameInstance {
 
     @Override
     public void run() {
-        updateScoreboard();
+        if(!this.scoreboardDisabled)
+             updateScoreboard();
         if (ConfigPreferences.isBarEnabled()) {
 
 
@@ -157,6 +164,7 @@ public class BuildInstance extends GameInstance {
                 } else {
                     getChatManager().broadcastMessage("Enough-Players-To-Start", "We now have enough players. The game is starting soon!");
                     setGameState(GameState.STARTING);
+                    Bukkit.getPluginManager().callEvent(new GameStartEvent(this));
 
                     setTimer(60);
                     this.showPlayers();
@@ -175,7 +183,8 @@ public class BuildInstance extends GameInstance {
                     for (Player player : getPlayers()) {
                         player.getInventory().clear();
                         player.setGameMode(GameMode.CREATIVE);
-                        hidePlayersOutsideTheGame(player);
+                        if(ConfigPreferences.isHidePlayersOutsideGameEnabled())
+                             hidePlayersOutsideTheGame(player);
                         player.getInventory().setItem(8, IngameMenu.getMenuItem());
                     }
                     setRandomTheme();
@@ -191,6 +200,7 @@ public class BuildInstance extends GameInstance {
                 if (getPlayers().size() <= 1) {
                     getChatManager().broadcastMessage("Only-Player-Left", ChatColor.RED + "U are the only player left. U will be teleported to the lobby");
                     setGameState(GameState.ENDING);
+                    Bukkit.getPluginManager().callEvent(new GameEndEvent(this));
                     setTimer(10);
                 }
                 if ((getTimer() == (4 * 60)
@@ -269,6 +279,7 @@ public class BuildInstance extends GameInstance {
                             player.teleport(winnerPlot.getTeleportLocation());
                         }
                         this.setGameState(GameState.ENDING);
+                        Bukkit.getPluginManager().callEvent(new GameEndEvent(this));
 
                         setTimer(10);
                     }
@@ -282,6 +293,7 @@ public class BuildInstance extends GameInstance {
                 setTimer(getTimer() - 1);
                 for(Player player:getPlayers()){
                     Util.spawnRandomFirework(player.getLocation());
+                    showPlayers();
                 }
                 if (getTimer() == 0) {
 
@@ -293,7 +305,11 @@ public class BuildInstance extends GameInstance {
                         player.setGameMode(GameMode.SURVIVAL);
                         player.setFlying(false);
                         player.setAllowFlight(false);
+                        ArmorHelper.clearArmor(player);
                         UserManager.getUser(player.getUniqueId()).addInt("gamesplayed", 1);
+                        if(plugin.isInventoryManagerEnabled()){
+                            plugin.getInventoryManager().loadInventory(player);
+                        }
 
                     }
 
@@ -319,6 +335,8 @@ public class BuildInstance extends GameInstance {
                 if(ConfigPreferences.restartOnEnd() && plugin.isBungeeActivated()){
                     plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(),"restart");
                 }
+
+
                 setGameState(GameState.WAITING_FOR_PLAYERS);
                 toplist.clear();
         }
@@ -357,6 +375,16 @@ public class BuildInstance extends GameInstance {
 
 
         }
+    }
+
+
+    @Override
+    public void setGameState(GameState gameState) {
+        if(getGameState() != null) {
+            GameChangeStateEvent gameChangeStateEvent = new GameChangeStateEvent(gameState, this, getGameState());
+            getPlugin().getServer().getPluginManager().callEvent(gameChangeStateEvent);
+        }
+        super.setGameState(gameState);
     }
 
     public void giveRewards(){
@@ -515,10 +543,12 @@ public class BuildInstance extends GameInstance {
         for (Player player : getPlayers()) {
             showPlayer(player);
         }
-        for (Player player : plugin.getServer().getOnlinePlayers()) {
-            if (!getPlayers().contains(player)) {
-                p.hidePlayer(player);
-                player.hidePlayer(p);
+        if(ConfigPreferences.isHidePlayersOutsideGameEnabled()) {
+            for (Player player : plugin.getServer().getOnlinePlayers()) {
+                if (!getPlayers().contains(player)) {
+                    p.hidePlayer(player);
+                    player.hidePlayer(p);
+                }
             }
         }
     }
