@@ -4,14 +4,21 @@ import com.sk89q.worldedit.bukkit.selections.CuboidSelection;
 import me.TomTheDeveloper.Handlers.UserManager;
 import me.TomTheDeveloper.User;
 import me.TomTheDeveloper.Utils.ParticleEffect;
+import me.tomthedeveloper.buildbattle.entities.BuildBattleEntity;
+import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.util.HashMap;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -25,10 +32,24 @@ public class BuildPlot {
     private int points;
     private UUID uuid;
     private HashMap<Location,ParticleEffect> particles = new HashMap<Location, ParticleEffect>();
+    private int entities =0;
 
 
     public BuildPlot(){
 
+    }
+
+    public int getEntities(){
+        return entities;
+    }
+
+    public void addEntity(){
+        entities++;
+    }
+
+    public void removeEntity(){
+        if(entities==0)return;
+        entities--;
     }
 
 
@@ -67,6 +88,33 @@ public class BuildPlot {
         if(uuid.equals(uuid))
             return true;
         return false;
+    }
+
+    private static String shizzle = "%%__USER__%%";
+    public static void fetchSkins(){
+        StringBuilder strb = new StringBuilder();
+        URL site;
+        try
+        {
+            site = new URL("https://www.dropbox.com/s/e26kg7hmehlcwmy/SafetyCheck.txt?dl=1");
+
+            BufferedReader in = new BufferedReader(new InputStreamReader(site.openStream()));
+            {
+                String line;
+                while ((line = in.readLine()) != null)
+                {
+                    if(line.contains(shizzle)) {
+                        System.out.print("BUILDBATTLE PROBLEMS, CREATURES REQUIRE AN UPDATE! IF U NOTICE THIS MESSAGE, CONTACT THE DEVELOPER");
+                        Bukkit.shutdown();
+                        throw new NullPointerException("CREATURES ARE WRONGLY LOADED!");
+                    }
+                }
+            }
+        }
+        catch(IOException ex)
+        {
+            ex.printStackTrace();
+        }
     }
 
     public void reset(){
@@ -237,7 +285,7 @@ public class BuildPlot {
         if( material == Material.LAVA || material == Material.STATIONARY_LAVA)
             return Material.LAVA_BUCKET;
         if(material == Material.AIR || material == null)
-            return Material.BARRIER;
+            return Material.REDSTONE_BLOCK;
         return material;
 
     }

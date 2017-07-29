@@ -1,8 +1,6 @@
 package me.tomthedeveloper.buildbattle;
 
-import io.netty.util.internal.StringUtil;
 import me.TomTheDeveloper.Handlers.ConfigurationManager;
-import me.TomTheDeveloper.Utils.ItemBuilder;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -13,7 +11,6 @@ import org.bukkit.inventory.meta.ItemMeta;
 
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 
 /**
  * Created by Tom on 17/08/2015.

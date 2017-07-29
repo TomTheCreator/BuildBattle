@@ -4,19 +4,14 @@ import me.TomTheDeveloper.Handlers.ChatManager;
 import me.TomTheDeveloper.MenuAPI.IconMenu;
 import me.TomTheDeveloper.Utils.ItemBuilder;
 import me.tomthedeveloper.buildbattle.BuildPlot;
-import me.tomthedeveloper.buildbattle.PlotManager;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.SkullType;
-import org.bukkit.block.Skull;
 import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 
 /**

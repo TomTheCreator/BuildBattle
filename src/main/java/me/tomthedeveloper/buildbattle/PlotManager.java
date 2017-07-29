@@ -11,7 +11,6 @@ import org.bukkit.entity.Player;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -21,6 +20,7 @@ public class PlotManager {
 
 
     private List<BuildPlot> plots = new ArrayList<BuildPlot>();
+    private List<BuildPlot> plotsToClear = new ArrayList<BuildPlot>();
     private BuildInstance buildInstance;
 
     public PlotManager(BuildInstance buildInstance){
@@ -52,6 +52,10 @@ public class PlotManager {
         }
     }
 
+    public void addToClearList(BuildPlot buildPlot){
+        plotsToClear.add(buildPlot);
+    }
+
     public BuildPlot getPlot(Player player){
         for(BuildPlot buildPlot:plots){
             if(buildPlot.getOwner() != null) {
@@ -79,13 +83,35 @@ public class PlotManager {
 
     }
 
+    public void resetQeuedPlots(){
+        for(BuildPlot buildPlot:plotsToClear){
+            buildPlot.reset();
+        }
+        plotsToClear.clear();
+    }
+
+    public boolean isPlotsCleared(){
+        return plotsToClear.isEmpty();
+    }
+
+    public void resetPlotsGradually(){
+        if(plotsToClear.isEmpty())
+            return;
+
+            plotsToClear.get(0).reset();
+        plotsToClear.remove(0);
+    }
+
     public void teleportToPlots(){
         for(BuildPlot buildPlot:plots){
             if(buildPlot.getOwner() != null) {
                 Location tploc = buildPlot.getCenter();
                 while(tploc.getBlock().getType() != Material.AIR)
                     tploc = tploc.add(0,1,0);
-                Bukkit.getServer().getPlayer(buildPlot.getOwner()).teleport(buildPlot.getCenter());
+                Player player = Bukkit.getServer().getPlayer(buildPlot.getOwner());
+                if(player != null){
+                    player.teleport(buildPlot.getCenter());
+                }
             }
         }
     }

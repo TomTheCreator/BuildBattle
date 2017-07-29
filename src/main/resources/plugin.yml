@@ -1,8 +1,8 @@
 main: me.tomthedeveloper.buildbattle.BuildBattle
-version: 1.0
+version: 2.0
 name: BuildBattle
 depend: [GameAPI, WorldEdit]
-softdepend: [BarAPI]
+softdepend: [BarAPI, Vault]
 commands:
   leave:
     usage: /leave
@@ -10,6 +10,7 @@ commands:
   BuildBattle:
     usage: /BuildBattle
     description: The main command
+    aliases: [BuildB, bb]
   addsigns:
     usage: /addsigns
     description: Adds signs to the plugin!

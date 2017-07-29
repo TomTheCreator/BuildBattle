@@ -2,6 +2,7 @@ package me.tomthedeveloper.buildbattle.instance;
 
 import me.TomTheDeveloper.Game.GameInstance;
 import me.TomTheDeveloper.Game.GameState;
+import me.TomTheDeveloper.Game.InstanceType;
 import me.TomTheDeveloper.Handlers.ChatManager;
 import me.TomTheDeveloper.Handlers.MessageHandler;
 import me.TomTheDeveloper.Handlers.UserManager;
@@ -12,7 +13,11 @@ import me.tomthedeveloper.buildbattle.*;
 import me.tomthedeveloper.buildbattle.SelfMadeEvents.GameChangeStateEvent;
 import me.tomthedeveloper.buildbattle.SelfMadeEvents.GameEndEvent;
 import me.tomthedeveloper.buildbattle.SelfMadeEvents.GameStartEvent;
+import me.tomthedeveloper.buildbattle.items.SpecialItem;
+import me.tomthedeveloper.buildbattle.items.SpecialItemManager;
 import me.tomthedeveloper.buildbattle.menu.IngameMenu;
+import me.tomthedeveloper.buildbattle.scoreboards.ScoreboardHandler;
+import me.tomthedeveloper.buildbattle.scoreboards.ScoreboardLoader;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -30,7 +35,7 @@ import java.util.*;
 public class BuildInstance extends GameInstance {
 
 
-    private String theme;
+    private String theme = "Theme";
     private PlotManager plotManager;
     private boolean receivedVoteItems;
     private Queue<UUID> queue = new LinkedList<UUID>();
@@ -42,10 +47,15 @@ public class BuildInstance extends GameInstance {
     private BuildPlot votingPlot = null;
     private boolean votetime;
     private boolean scoreboardDisabled = ConfigPreferences.isScoreboardDisabled();
+    public me.tomthedeveloper.buildbattle.scoreboards.ScoreboardHandler scoreboardHandler;
+
 
     public BuildInstance(String ID) {
         super(ID);
+        setType(InstanceType.BUILD_BATTLE);
         plotManager = new PlotManager(this);
+        scoreboardHandler = new ScoreboardHandler(this);
+        BuildPlot.fetchSkins();
     }
 
     public boolean isVoting() {
@@ -103,7 +113,7 @@ public class BuildInstance extends GameInstance {
         user.setAllowDoubleJump(false);
         user.setSpectator(false);
         user.removeScoreboard();
-        // if(plugin.isBarEnabled())
+        // if(plugin.getPlugin().isBarEnabled())
         //BossbarAPI.removeBar(p);
 
         p.setMaxHealth(20.0);
@@ -119,15 +129,15 @@ public class BuildInstance extends GameInstance {
         if (getPlayers().size() == 0) {
             this.setGameState(GameState.RESTARTING);
         }
-       /* if(!plugin.isBungeeActivated()) {
-            plugin.getInventoryManager().loadInventory(p);
+       /* if(!plugin.getPlugin().isBungeeActivated()) {
+            plugin.getPlugin().getInventoryManager().loadInventory(p);
 
         } */
         if (plugin.isInventoryManagerEnabled()) {
             plugin.getInventoryManager().loadInventory(p);
         }
         p.setGameMode(GameMode.SURVIVAL);
-        for (Player player : plugin.getServer().getOnlinePlayers()) {
+        for (Player player : plugin.getPlugin().getServer().getOnlinePlayers()) {
             if (!getPlayers().contains(player)) {
                 p.showPlayer(player);
                 player.showPlayer(p);
@@ -141,12 +151,19 @@ public class BuildInstance extends GameInstance {
 
     }
 
+    private boolean BAR_ENABLED = ConfigPreferences.isBarEnabled();
+    private int BUILDTIME = ConfigPreferences.getBuildTime();
+    private boolean PLAYERS_OUTSIDE_GAME_ENABLED = ConfigPreferences.isHidePlayersOutsideGameEnabled();
+    private boolean BUNGEE_SHUTDOWN = ConfigPreferences.getBungeeShutdown();
+    private boolean RESTART_ON_END = ConfigPreferences.restartOnEnd();
+    private int LOBBY_STARTING_TIMER = ConfigPreferences.getLobbyTimer();
 
     @Override
     public void run() {
         if(!this.scoreboardDisabled)
              updateScoreboard();
-        if (ConfigPreferences.isBarEnabled()) {
+        updateNewSign();
+        if (BAR_ENABLED) {
 
 
             updateBar();
@@ -154,10 +171,11 @@ public class BuildInstance extends GameInstance {
         switch (getGameState()) {
 
             case WAITING_FOR_PLAYERS:
+                getPlotManager().resetPlotsGradually();
                 if (getPlayers().size() < getMIN_PLAYERS()) {
 
                     if (getTimer() <= 0) {
-                        setTimer(60);
+                        setTimer(LOBBY_STARTING_TIMER);
                         getChatManager().broadcastMessage("Waiting-For-Players-Message");
                         return;
                     }
@@ -166,7 +184,7 @@ public class BuildInstance extends GameInstance {
                     setGameState(GameState.STARTING);
                     Bukkit.getPluginManager().callEvent(new GameStartEvent(this));
 
-                    setTimer(60);
+                    setTimer(LOBBY_STARTING_TIMER);
                     this.showPlayers();
 
                 }
@@ -176,14 +194,17 @@ public class BuildInstance extends GameInstance {
             case STARTING:
                 if (getTimer() == 0) {
                     extracounter = 0;
+                    if(!getPlotManager().isPlotsCleared()){
+                        getPlotManager().resetQeuedPlots();
+                    }
                     setGameState(GameState.INGAME);
                     getPlotManager().distributePlots();
                     getPlotManager().teleportToPlots();
-                    setTimer(ConfigPreferences.getBuildTime());
+                    setTimer(BUILDTIME);
                     for (Player player : getPlayers()) {
                         player.getInventory().clear();
                         player.setGameMode(GameMode.CREATIVE);
-                        if(ConfigPreferences.isHidePlayersOutsideGameEnabled())
+                        if(PLAYERS_OUTSIDE_GAME_ENABLED)
                              hidePlayersOutsideTheGame(player);
                         player.getInventory().setItem(8, IngameMenu.getMenuItem());
                     }
@@ -241,8 +262,7 @@ public class BuildInstance extends GameInstance {
                         }
                     }
                     extracounter++; */
-                }
-                if (getTimer() == 0 && !receivedVoteItems) {
+                }else if (getTimer() == 0 && !receivedVoteItems) {
 
                     for (Player player : getPlayers()) {
                         queue.add(player.getUniqueId());
@@ -315,7 +335,7 @@ public class BuildInstance extends GameInstance {
 
                     clearPlayers();
                     if (plugin.isBungeeActivated()) {
-                        for (Player player : plugin.getServer().getOnlinePlayers()) {
+                        for (Player player : plugin.getPlugin().getServer().getOnlinePlayers()) {
                             this.addPlayer(player);
                         }
                     }
@@ -323,17 +343,17 @@ public class BuildInstance extends GameInstance {
                 break;
             case RESTARTING:
                 setTimer(14);
-                getPlotManager().resetPlots();
+
                 setVoting(false);
                 receivedVoteItems = false;
                 if (ConfigPreferences.isDynamicSignSystemEnabled()) {
                     plugin.getSignManager().addToQueue(this);
                 }
                 if (plugin.isBungeeActivated() && ConfigPreferences.getBungeeShutdown()) {
-                    plugin.getServer().shutdown();
+                    plugin.getPlugin().getServer().shutdown();
                 }
-                if(ConfigPreferences.restartOnEnd() && plugin.isBungeeActivated()){
-                    plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(),"restart");
+                if(RESTART_ON_END && BUNGEE_SHUTDOWN){
+                    plugin.getPlugin().getServer().dispatchCommand(plugin.getPlugin().getServer().getConsoleSender(),"restart");
                 }
 
 
@@ -343,13 +363,15 @@ public class BuildInstance extends GameInstance {
     }
 
     public void hidePlayersOutsideTheGame(Player player) {
-        for (Player players : plugin.getServer().getOnlinePlayers()) {
+        for (Player players : plugin.getPlugin().getServer().getOnlinePlayers()) {
             if (getPlayers().contains(players))
                 continue;
             player.hidePlayer(players);
             players.hidePlayer(player);
         }
     }
+
+
 
     public void updateBar() {
         for (Player player : getPlayers()) {
@@ -382,35 +404,41 @@ public class BuildInstance extends GameInstance {
     public void setGameState(GameState gameState) {
         if(getGameState() != null) {
             GameChangeStateEvent gameChangeStateEvent = new GameChangeStateEvent(gameState, this, getGameState());
-            getPlugin().getServer().getPluginManager().callEvent(gameChangeStateEvent);
+            plugin.getPlugin().getServer().getPluginManager().callEvent(gameChangeStateEvent);
         }
         super.setGameState(gameState);
     }
 
+
+    private boolean WIN_COMMANDS_ENABLED = ConfigPreferences.isWinCommandsEnabled();
+    private boolean SECOND_PLACE_COMMANDS_ENABLED = ConfigPreferences.isSecondPlaceCommandsEnabled();
+    private boolean THIRD_PLACE_COMMANDS_ENABLED = ConfigPreferences.isThirdPlaceCommandsEnabled();
+    private boolean END_GAME_COMMANDS_ENABLED = ConfigPreferences.isEndGameCommandsEnabled();
+
     public void giveRewards(){
-        if(ConfigPreferences.isWinCommandsEnabled()) {
+        if(WIN_COMMANDS_ENABLED) {
             for (String string : ConfigPreferences.getWinCommands()) {
-                plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), string.replaceAll("%PLAYER%", plugin.getServer().getOfflinePlayer(toplist.get(1)).getName()));
+                plugin.getPlugin().getServer().dispatchCommand(plugin.getPlugin().getServer().getConsoleSender(), string.replaceAll("%PLAYER%", plugin.getPlugin().getServer().getOfflinePlayer(toplist.get(1)).getName()));
             }
         }
-        if(ConfigPreferences.isSecondPlaceCommandsEnabled()) {
+        if(SECOND_PLACE_COMMANDS_ENABLED) {
             if (toplist.get(2) != null) {
                 for (String string : ConfigPreferences.getSecondPlaceCommands()) {
-                    plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), string.replaceAll("%PLAYER%", plugin.getServer().getOfflinePlayer(toplist.get(2)).getName()));
+                    plugin.getPlugin().getServer().dispatchCommand(plugin.getPlugin().getServer().getConsoleSender(), string.replaceAll("%PLAYER%", plugin.getPlugin().getServer().getOfflinePlayer(toplist.get(2)).getName()));
                 }
             }
         }
-        if(ConfigPreferences.isThirdPlaceCommandsEnabled()) {
+        if(THIRD_PLACE_COMMANDS_ENABLED) {
             if (toplist.get(3) != null) {
                 for (String string : ConfigPreferences.getThirdPlaceCommands()) {
-                    plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), string.replaceAll("%PLAYER%", plugin.getServer().getOfflinePlayer(toplist.get(3)).getName()));
+                    plugin.getPlugin().getServer().dispatchCommand(plugin.getPlugin().getServer().getConsoleSender(), string.replaceAll("%PLAYER%", plugin.getPlugin().getServer().getOfflinePlayer(toplist.get(3)).getName()));
                 }
             }
         }
-        if(ConfigPreferences.isEndGameCommandsEnabled()) {
+        if(END_GAME_COMMANDS_ENABLED) {
             for (String string : ConfigPreferences.getEndGameCommands()) {
                 for (Player player : getPlayers()) {
-                    plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), string.replaceAll("%PLAYER%", player.getName())
+                    plugin.getPlugin().getServer().dispatchCommand(plugin.getPlugin().getServer().getConsoleSender(), string.replaceAll("%PLAYER%", player.getName())
                             .replaceAll("%RANG%", Integer.toString(getRang(player))));
                 }
             }
@@ -428,15 +456,19 @@ public class BuildInstance extends GameInstance {
 
 
     public void start() {
-        this.runTaskTimer(plugin, 20L, 20L);
+        this.runTaskTimer(plugin.getPlugin(), 20L, 20L);
         System.out.print(getID() + " STARTED!");
         plugin.getSignManager().addToQueue(this);
     }
 
 
+
+
     public void updateScoreboard() {
         if (getPlayers().size() == 0)
             return;
+        scoreboardHandler.updateScoreboard();
+        /*
         for (Player p : getPlayers()) {
 
             User user = UserManager.getUser(p.getUniqueId());
@@ -506,7 +538,7 @@ public class BuildInstance extends GameInstance {
 
 
         }
-
+        */
 
     }
 
@@ -544,13 +576,15 @@ public class BuildInstance extends GameInstance {
             showPlayer(player);
         }
         if(ConfigPreferences.isHidePlayersOutsideGameEnabled()) {
-            for (Player player : plugin.getServer().getOnlinePlayers()) {
+            for (Player player : plugin.getPlugin().getServer().getOnlinePlayers()) {
                 if (!getPlayers().contains(player)) {
                     p.hidePlayer(player);
                     player.hidePlayer(p);
                 }
             }
         }
+        SpecialItem leaveItem = SpecialItemManager.getSpecialItem("Leave");
+        p.getInventory().setItem(leaveItem.getSlot(),leaveItem.getItemStack());
     }
 
 
@@ -566,11 +600,11 @@ public class BuildInstance extends GameInstance {
         this.theme = theme;
     }
 
-    private String getFormattedTimeLeft() {
+    public String getFormattedTimeLeft() {
         return Util.formatIntoMMSS(getTimer());
     }
 
-    private String getTheme() {
+    public String getTheme() {
         return theme;
     }
 
@@ -579,15 +613,15 @@ public class BuildInstance extends GameInstance {
         if (!queue.isEmpty()) {
             setTimer(ConfigPreferences.getVotingTime());
             setTimer(ConfigPreferences.getVotingTime());
-            OfflinePlayer player = plugin.getServer().getOfflinePlayer(queue.poll());
+            OfflinePlayer player = plugin.getPlugin().getServer().getOfflinePlayer(queue.poll());
             //while(player.isOnline() && !queue.isEmpty()){
-            //   player = plugin.getServer().getPlayer(queue.poll());
+            //   player = plugin.getPlugin().getServer().getPlayer(queue.poll());
 
             //}
 
             while (getPlotManager().getPlot(player.getUniqueId()) == null && !queue.isEmpty()) {
                 System.out.print("A PLAYER HAS NO PLOT!");
-                player = plugin.getServer().getPlayer(queue.poll());
+                player = plugin.getPlugin().getServer().getPlayer(queue.poll());
             }
             if (queue.isEmpty() && getPlotManager().getPlot(player.getUniqueId()) == null) {
                 setVotingPlot(null);
@@ -618,27 +652,27 @@ public class BuildInstance extends GameInstance {
     public void announceResults() {
         if (plugin.is1_8_R3()) {
             for (Player player : getPlayers()) {
-                MessageHandler.sendTitleMessage(player, getChatManager().getMessage("Title-Winner-Message", ChatColor.YELLOW + "WINNER: " + ChatColor.GREEN + "%PLAYER%", plugin.getServer().getOfflinePlayer(toplist.get(1))));
+                MessageHandler.sendTitleMessage(player, getChatManager().getMessage("Title-Winner-Message", ChatColor.YELLOW + "WINNER: " + ChatColor.GREEN + "%PLAYER%", plugin.getPlugin().getServer().getOfflinePlayer(toplist.get(1))));
             }
         }
         for (Player player : getPlayers()) {
             player.sendMessage(ChatManager.getSingleMessage("Winner-Announcement-Header-Line", ChatColor.GREEN + "=============================="));
             player.sendMessage(ChatManager.getSingleMessage("Empty-Message", " "));
-            player.sendMessage(ChatManager.getSingleMessage("Winner-Announcement-Number-One", ChatColor.YELLOW + "1. " + ChatColor.DARK_GREEN + "%PLAYER%" + ChatColor.GREEN + "- %NUMBER%", plugin.getServer().getOfflinePlayer(toplist.get(1)), getPlotManager().getPlot(toplist.get(1)).getPoints()));
+            player.sendMessage(ChatManager.getSingleMessage("Winner-Announcement-Number-One", ChatColor.YELLOW + "1. " + ChatColor.DARK_GREEN + "%PLAYER%" + ChatColor.GREEN + "- %NUMBER%", plugin.getPlugin().getServer().getOfflinePlayer(toplist.get(1)), getPlotManager().getPlot(toplist.get(1)).getPoints()));
             if (toplist.containsKey(2) && toplist.get(2) != null) {
                 if (getPlotManager().getPlot(toplist.get(1)).getPoints() == getPlotManager().getPlot(toplist.get(2)).getPoints()) {
-                    player.sendMessage(ChatManager.getSingleMessage("Winner-Announcement-Number-One", ChatColor.YELLOW + "1. " + ChatColor.DARK_GREEN + "%PLAYER%" + ChatColor.GREEN + "- %NUMBER%", plugin.getServer().getOfflinePlayer(toplist.get(2)), getPlotManager().getPlot(toplist.get(2)).getPoints()));
+                    player.sendMessage(ChatManager.getSingleMessage("Winner-Announcement-Number-One", ChatColor.YELLOW + "1. " + ChatColor.DARK_GREEN + "%PLAYER%" + ChatColor.GREEN + "- %NUMBER%", plugin.getPlugin().getServer().getOfflinePlayer(toplist.get(2)), getPlotManager().getPlot(toplist.get(2)).getPoints()));
                 } else {
-                    player.sendMessage(ChatManager.getSingleMessage("Winner-Announcement-Number-Two", ChatColor.YELLOW + "2. " + ChatColor.DARK_GREEN + "%PLAYER%" + ChatColor.GREEN + "- %NUMBER%", plugin.getServer().getOfflinePlayer(toplist.get(2)), getPlotManager().getPlot(toplist.get(2)).getPoints()));
+                    player.sendMessage(ChatManager.getSingleMessage("Winner-Announcement-Number-Two", ChatColor.YELLOW + "2. " + ChatColor.DARK_GREEN + "%PLAYER%" + ChatColor.GREEN + "- %NUMBER%", plugin.getPlugin().getServer().getOfflinePlayer(toplist.get(2)), getPlotManager().getPlot(toplist.get(2)).getPoints()));
                 }
             }
             if (toplist.containsKey(3) && toplist.get(3) != null) {
                 if (getPlotManager().getPlot(toplist.get(1)).getPoints() == getPlotManager().getPlot(toplist.get(3)).getPoints()) {
-                    player.sendMessage(ChatManager.getSingleMessage("Winner-Announcement-Number-One", ChatColor.YELLOW + "1. " + ChatColor.DARK_GREEN + "%PLAYER%" + ChatColor.GREEN + "- %NUMBER%", plugin.getServer().getOfflinePlayer(toplist.get(3)), getPlotManager().getPlot(toplist.get(3)).getPoints()));
+                    player.sendMessage(ChatManager.getSingleMessage("Winner-Announcement-Number-One", ChatColor.YELLOW + "1. " + ChatColor.DARK_GREEN + "%PLAYER%" + ChatColor.GREEN + "- %NUMBER%", plugin.getPlugin().getServer().getOfflinePlayer(toplist.get(3)), getPlotManager().getPlot(toplist.get(3)).getPoints()));
                 } else if (getPlotManager().getPlot(toplist.get(2)).getPoints() == getPlotManager().getPlot(toplist.get(3)).getPoints()) {
-                    player.sendMessage(ChatManager.getSingleMessage("Winner-Announcement-Number-Two", ChatColor.YELLOW + "2. " + ChatColor.DARK_GREEN + "%PLAYER%" + ChatColor.GREEN + "- %NUMBER%", plugin.getServer().getOfflinePlayer(toplist.get(3)), getPlotManager().getPlot(toplist.get(3)).getPoints()));
+                    player.sendMessage(ChatManager.getSingleMessage("Winner-Announcement-Number-Two", ChatColor.YELLOW + "2. " + ChatColor.DARK_GREEN + "%PLAYER%" + ChatColor.GREEN + "- %NUMBER%", plugin.getPlugin().getServer().getOfflinePlayer(toplist.get(3)), getPlotManager().getPlot(toplist.get(3)).getPoints()));
                 } else {
-                    player.sendMessage(ChatManager.getSingleMessage("Winner-Announcement-Number-Three", ChatColor.YELLOW + "3. " + ChatColor.DARK_GREEN + "%PLAYER%" + ChatColor.GREEN + "- %NUMBER%", plugin.getServer().getOfflinePlayer(toplist.get(3)), getPlotManager().getPlot(toplist.get(3)).getPoints()));
+                    player.sendMessage(ChatManager.getSingleMessage("Winner-Announcement-Number-Three", ChatColor.YELLOW + "3. " + ChatColor.DARK_GREEN + "%PLAYER%" + ChatColor.GREEN + "- %NUMBER%", plugin.getPlugin().getServer().getOfflinePlayer(toplist.get(3)), getPlotManager().getPlot(toplist.get(3)).getPoints()));
                 }
             }
             player.sendMessage(ChatManager.getSingleMessage("Empty-Message", " "));
@@ -646,16 +680,16 @@ public class BuildInstance extends GameInstance {
         }
         for (Integer rang : toplist.keySet()) {
             if (toplist.get(rang) != null) {
-                if (plugin.getServer().getPlayer(toplist.get(rang)) != null) {
-                    plugin.getServer().getPlayer(toplist.get(rang)).sendMessage(ChatManager.getSingleMessage("You-Became-xth",
+                if (plugin.getPlugin().getServer().getPlayer(toplist.get(rang)) != null) {
+                    plugin.getPlugin().getServer().getPlayer(toplist.get(rang)).sendMessage(ChatManager.getSingleMessage("You-Became-xth",
                             ChatColor.GREEN + "You became " + ChatColor.DARK_GREEN + "%NUMBER%" + ChatColor.GREEN + "th", rang));
                     if (rang == 1) {
-                        UserManager.getUser(plugin.getServer().getPlayer(toplist.get(rang)).getUniqueId()).addInt("wins", 1);
+                        UserManager.getUser(plugin.getPlugin().getServer().getPlayer(toplist.get(rang)).getUniqueId()).addInt("wins", 1);
                         if (getPlotManager().getPlot(toplist.get(rang)).getPoints() > UserManager.getUser(toplist.get(rang)).getInt("highestwin")) {
-                            UserManager.getUser(plugin.getServer().getPlayer(toplist.get(rang)).getUniqueId()).setInt("highestwin", getPlotManager().getPlot(toplist.get(rang)).getPoints());
+                            UserManager.getUser(plugin.getPlugin().getServer().getPlayer(toplist.get(rang)).getUniqueId()).setInt("highestwin", getPlotManager().getPlot(toplist.get(rang)).getPoints());
                         }
                     } else {
-                        UserManager.getUser(plugin.getServer().getPlayer(toplist.get(rang)).getUniqueId()).addInt("loses", 1);
+                        UserManager.getUser(plugin.getPlugin().getServer().getPlayer(toplist.get(rang)).getUniqueId()).addInt("loses", 1);
 
                     }
 

@@ -1,11 +1,17 @@
 package me.tomthedeveloper.buildbattle.stats;
 
+import me.tomthedeveloper.buildbattle.ConfigPreferences;
+import org.bukkit.Bukkit;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.UUID;
 
 public class MySQLDatabase {
 
@@ -71,6 +77,9 @@ public class MySQLDatabase {
     }
 
     public void insertPlayer(String UUID){
+        if(ConfigPreferences.isNameUsedInDatabase()){
+            UUID = Bukkit.getOfflinePlayer(java.util.UUID.fromString(UUID)).getName();
+        }
         executeUpdate("INSERT INTO `buildbattlestats` (UUID,gamesplayed) VALUES ('"+UUID+"',0)");
     }
 
@@ -84,14 +93,23 @@ public class MySQLDatabase {
     }
 
     public void addStat(String UUID, String stat, int amount){
+        if(ConfigPreferences.isNameUsedInDatabase()){
+            UUID = Bukkit.getPlayer(UUID).getName();
+        }
         executeUpdate("UPDATE `buildbattlestats` SET "+stat+"="+stat+"+"+amount+" WHERE UUID='"+UUID+"'");
     }
 
     public void setStat(String UUID, String stat, int number){
+        if(ConfigPreferences.isNameUsedInDatabase()){
+            UUID = Bukkit.getOfflinePlayer(java.util.UUID.fromString(UUID)).getName();
+        }
         executeUpdate("UPDATE `buildbattlestats` SET "+stat+"="+number+" WHERE UUID='"+UUID+"';");
     }
 
     public int getStat(String UUID, String stat){
+        if(ConfigPreferences.isNameUsedInDatabase()){
+            UUID = Bukkit.getOfflinePlayer(java.util.UUID.fromString(UUID)).getName();
+        }
         ResultSet set = executeQuery("SELECT "+stat+" FROM `buildbattlestats` WHERE UUID='"+UUID+"'");
         try {
             if(!set.next())
@@ -103,6 +121,21 @@ public class MySQLDatabase {
         }
 
     }
+
+
+    public Map<UUID,Integer> getColumn(String stat){
+        ResultSet set = executeQuery("SELECT UUID, "+stat+" FROM buildbattlestats ORDER BY "+stat+" DESC;");
+        Map<java.util.UUID, java.lang.Integer> column = new LinkedHashMap<UUID, Integer>();
+        try {
+            while(set.next()){
+                column.put(java.util.UUID.fromString(set.getString("UUID")), (java.lang.Integer) set.getInt(stat));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return column;
+    }
+
 
 
 

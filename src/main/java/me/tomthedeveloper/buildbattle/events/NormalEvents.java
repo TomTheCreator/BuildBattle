@@ -1,5 +1,6 @@
 package me.tomthedeveloper.buildbattle.events;
 
+import me.TomTheDeveloper.GameAPI;
 import me.TomTheDeveloper.Handlers.UserManager;
 import me.TomTheDeveloper.User;
 import me.tomthedeveloper.buildbattle.BuildBattle;
@@ -23,16 +24,18 @@ public class NormalEvents implements Listener {
 
 
     private BuildBattle plugin;
+    private GameAPI gameAPI;
 
     public NormalEvents(BuildBattle plugin){
         this.plugin = plugin;
+        gameAPI = plugin.getGameAPI();
     }
 
 
     @EventHandler
     public void onQuitSaveStats(PlayerQuitEvent event) {
-        if(plugin.getGameInstanceManager().getGameInstance(event.getPlayer()) != null){
-            plugin.getGameInstanceManager().getGameInstance(event.getPlayer()).leaveAttempt(event.getPlayer());
+        if(gameAPI.getGameInstanceManager().getGameInstance(event.getPlayer()) != null){
+            gameAPI.getGameInstanceManager().getGameInstance(event.getPlayer()).leaveAttempt(event.getPlayer());
         }
         final User user = UserManager.getUser(event.getPlayer().getUniqueId());
 
@@ -49,54 +52,67 @@ public class NormalEvents implements Listener {
             System.out.println("");
         }
         */
-        List<String> temp = new ArrayList<String>();
-        temp.add("gamesplayed");
-        temp.add("wins");
-        temp.add("loses");
-        temp.add("highestwin");
-        temp.add("blocksplaced");
-        temp.add("blocksbroken");
-        temp.add("particles");
+
         final Player player = event.getPlayer();
-        for(final String s:temp){
+
 
             if(plugin.isDatabaseActivated()) {
                 Bukkit.getScheduler().runTaskAsynchronously(plugin,new Runnable() {
                     @Override
                     public void run() {
-                        int i;
-                        try{
-                            i = plugin.getMySQLDatabase().getStat(player.getUniqueId().toString(),s);
-                        }catch (NullPointerException npe){
-                            i = 0;
-                            System.out.print("COULDN'T GET STATS FROM PLAYER: " + player.getName());
-                        }
+                        List<String> temp = new ArrayList<String>();
+                        temp.add("gamesplayed");
+                        temp.add("wins");
+                        temp.add("loses");
+                        temp.add("highestwin");
+                        temp.add("blocksplaced");
+                        temp.add("blocksbroken");
+                        temp.add("particles");
+                        for(final String s:temp) {
+                            int i;
+                            try {
+                                i = plugin.getMySQLDatabase().getStat(player.getUniqueId().toString(), s);
+                            } catch (NullPointerException npe) {
+                                i = 0;
+                                System.out.print("COULDN'T GET STATS FROM PLAYER: " + player.getName());
+                            }
 
-                        if(i > user.getInt(s)){
-                            plugin.getMySQLDatabase().setStat(player.getUniqueId().toString(), s, user.getInt(s) + i);
-                        }else {
-                            plugin.getMySQLDatabase().setStat(player.getUniqueId().toString(), s, user.getInt(s));
+                            if (i > user.getInt(s)) {
+                                plugin.getMySQLDatabase().setStat(player.getUniqueId().toString(), s, user.getInt(s) + i);
+                            } else {
+                                plugin.getMySQLDatabase().setStat(player.getUniqueId().toString(), s, user.getInt(s));
+                            }
                         }
                     }
                 });
-
+                UserManager.removeUser(event.getPlayer().getUniqueId());
             }
             else {
-                plugin.getFileStats().saveStat(player, s);
+                List<String> temp = new ArrayList<String>();
+                temp.add("gamesplayed");
+                temp.add("wins");
+                temp.add("loses");
+                temp.add("highestwin");
+                temp.add("blocksplaced");
+                temp.add("blocksbroken");
+                temp.add("particles");
+                for(final String s:temp) {
+                    plugin.getFileStats().saveStat(player, s);
+                }
             }
 
 
-        }
 
-        UserManager.removeUser(event.getPlayer().getUniqueId());
+
+
     }
 
 
 
     @EventHandler
     public void onJoin(final PlayerJoinEvent event) {
-        if(plugin.isBungeeActivated())
-            plugin.getGameInstanceManager().getGameInstances().get(0).teleportToLobby(event.getPlayer());
+        if(gameAPI.isBungeeActivated())
+            gameAPI.getGameInstanceManager().getGameInstances().get(0).teleportToLobby(event.getPlayer());
         if(!plugin.isDatabaseActivated()){
             List<String> temp = new ArrayList<String>();
             temp.add("gamesplayed");
@@ -112,7 +128,8 @@ public class NormalEvents implements Listener {
             return;
         }
         User user = UserManager.getUser(event.getPlayer().getUniqueId());
-
+        final String playername = event.getPlayer().getUniqueId().toString();
+        final Player player = event.getPlayer();
 /*        if (plugin.getMyDatabase().getSingle(new BasicDBObject().append("UUID", event.getPlayer().getUniqueId().toString())) == null) {
             plugin.getMyDatabase().insertDocument(new String[]{"UUID", "gamesplayed", "kills", "deaths", "highestwave", "exp", "level", "orbs"},
                     new Object[]{event.getPlayer().getUniqueId().toString(), 0, 0, 0, 0, 0, 0, 0});
@@ -133,8 +150,7 @@ public class NormalEvents implements Listener {
         Bukkit.getScheduler().runTaskAsynchronously(plugin, new Runnable() {
 
 
-            final String playername = event.getPlayer().getUniqueId().toString();
-            final Player player = event.getPlayer();
+
             @Override
             public void run() {
                 boolean b = false;
@@ -172,7 +188,7 @@ public class NormalEvents implements Listener {
                     user.setInt("particles",particles);
                     b = true;
                 } catch (SQLException e1) {
-                    System.out.print("CONNECTION FAILED FOR PLAYER " + event.getPlayer().getName());
+                    System.out.print("CONNECTION FAILED FOR PLAYER " + playername);
                     //e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
                 }
                 if(b=false){
@@ -208,7 +224,7 @@ public class NormalEvents implements Listener {
                         user.setInt("particles",particles);
                         b = true;
                     } catch (SQLException e1) {
-                        System.out.print("CONNECTION FAILED TWICE FOR PLAYER " + event.getPlayer().getName());
+                        System.out.print("CONNECTION FAILED TWICE FOR PLAYER " + playername);
                         //e1.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
                     }
                 }

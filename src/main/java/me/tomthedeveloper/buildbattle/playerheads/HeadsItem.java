@@ -2,7 +2,6 @@ package me.tomthedeveloper.buildbattle.playerheads;
 
 import me.TomTheDeveloper.Handlers.ConfigurationManager;
 import me.TomTheDeveloper.Utils.Items;
-import me.TomTheDeveloper.Utils.ParticleEffect;
 import me.TomTheDeveloper.Utils.Util;
 import me.tomthedeveloper.buildbattle.ChatFormatter;
 import org.bukkit.Bukkit;

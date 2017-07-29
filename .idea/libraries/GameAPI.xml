@@ -1,7 +1,7 @@
 <component name="libraryTable">
   <library name="GameAPI">
     <CLASSES>
-      <root url="jar://$USER_HOME$/Documents/Server/TestingServer/plugins/GameAPI.jar!/" />
+      <root url="jar://$USER_HOME$/Documents/Spigot/VD-TestServer/plugins/GameAPI.jar!/" />
     </CLASSES>
     <JAVADOC />
     <SOURCES />

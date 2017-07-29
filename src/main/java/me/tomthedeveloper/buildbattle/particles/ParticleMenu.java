@@ -7,8 +7,8 @@ import me.TomTheDeveloper.Utils.ParticleEffect;
 import me.TomTheDeveloper.Utils.Util;
 import me.tomthedeveloper.buildbattle.BuildPlot;
 import me.tomthedeveloper.buildbattle.ConfigPreferences;
-import net.minecraft.server.v1_8_R3.Material;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -17,7 +17,6 @@ import org.bukkit.inventory.ItemStack;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.List;
 
 /**
@@ -35,7 +34,7 @@ public class ParticleMenu {
             if(particleItem.isEnabled())
                 inventory.setItem(particleItem.getSlot(),particleItem.getItemStack());
         }
-        ItemStack itemStack = new ItemStack(org.bukkit.Material.BARRIER);
+        ItemStack itemStack = new ItemStack(Material.REDSTONE_BLOCK);
         Util.setItemNameAndLore(itemStack,ChatManager.getSingleMessage("Remove-Particle-Item-Name", ChatColor.RED + "Remove Particles"),
                 new String[]{ChatManager.getSingleMessage("Remove-Particle-Item-Lore", "Right click to open menu!")});
         inventory.setItem(53,itemStack);
@@ -47,6 +46,12 @@ public class ParticleMenu {
         FileConfiguration config = ConfigurationManager.getConfig("particles");
         int slotcounter = 0;
         for(ParticleEffect particleEffect:ParticleEffect.values()){
+            if(particleEffect == ParticleEffect.BLOCK_CRACK
+                    || particleEffect == ParticleEffect.ITEM_CRACK
+                    || particleEffect == ParticleEffect.ITEM_TAKE
+                    || particleEffect == ParticleEffect.BLOCK_DUST
+                    || particleEffect == ParticleEffect.MOB_APPEARANCE)
+                continue;
             if(!config.contains(particleEffect.toString())){
                 config.set(particleEffect.toString() + ".data",0);
                 config.set(particleEffect.toString() + ".displayname","&6" + particleEffect.toString());

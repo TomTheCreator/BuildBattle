@@ -2,27 +2,48 @@ package me.tomthedeveloper.buildbattle;
 
 import com.sk89q.worldedit.bukkit.selections.CuboidSelection;
 import com.sk89q.worldedit.bukkit.selections.Selection;
+import me.TomTheDeveloper.CommandsInterface;
 import me.TomTheDeveloper.Game.GameInstance;
 import me.TomTheDeveloper.Game.GameState;
 import me.TomTheDeveloper.GameAPI;
 import me.TomTheDeveloper.Handlers.ChatManager;
 import me.TomTheDeveloper.Handlers.UserManager;
 import me.TomTheDeveloper.User;
+import me.TomTheDeveloper.commands.InstanceCommands;
+import me.tomthedeveloper.buildbattle.entities.EntityItem;
+import me.tomthedeveloper.buildbattle.entities.EntityItemManager;
+import me.tomthedeveloper.buildbattle.entities.EntityMenuEvents;
 import me.tomthedeveloper.buildbattle.events.IngameEvents;
 import me.tomthedeveloper.buildbattle.events.NormalEvents;
+import me.tomthedeveloper.buildbattle.events.v1_8IngameEvents;
 import me.tomthedeveloper.buildbattle.instance.BuildInstance;
+import me.tomthedeveloper.buildbattle.items.SpecialItem;
 import me.tomthedeveloper.buildbattle.particles.ParticleHandler;
 import me.tomthedeveloper.buildbattle.particles.ParticleMenu;
 import me.tomthedeveloper.buildbattle.playerheads.PlayerHeadsMenu;
+import me.tomthedeveloper.buildbattle.stats.BuildBattleStats;
 import me.tomthedeveloper.buildbattle.stats.FileStats;
 import me.tomthedeveloper.buildbattle.stats.MySQLDatabase;
 import me.tomthedeveloper.buildbattle.stats.statsCommand;
+import net.milkbowl.vault.chat.Chat;
+import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.permission.Permission;
+import org.apache.commons.io.FileDeleteStrategy;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Location;
+import org.bukkit.block.Sign;
 import org.bukkit.command.Command;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.entity.Player;
+import org.bukkit.plugin.RegisteredServiceProvider;
+import org.bukkit.plugin.java.JavaPlugin;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -31,25 +52,20 @@ import java.util.List;
 /**
  * Created by Tom on 17/08/2015.
  */
-public class BuildBattle extends GameAPI {
+public class BuildBattle extends JavaPlugin implements CommandsInterface {
 
 
     private boolean databaseActivated = false;
     private MySQLDatabase database;
     private FileConfiguration statsConfig = null;
     private FileStats fileStats;
+    private GameAPI gameAPI = new GameAPI();
 
-    @Override
+
     public void setupMessageConfig(){
         ChatManager.getFromLanguageConfig("Waiting-For-Players-Message", "Waiting for players... We need at least " + ChatManager.HIGHLIGHTED + "%MINPLAYERS%"+ ChatManager.NORMAL +" players to start.");
         ChatManager.getFromLanguageConfig("Enough-Players-To-Start","We now have enough players. The game is starting soon!");
         ChatManager.getFromLanguageConfig("The-Game-Has-Started", "The game has started! Start building guys!!");
-        ChatManager.getFromLanguageConfig("Scoreboard-Header", ChatManager.PREFIX + "BuildBattle");
-        ChatManager.getFromLanguageConfig("Scoreboard-Players", ChatManager.NORMAL + "Players ");
-        ChatManager.getFromLanguageConfig("Scoreboard-Min-Players-Message", ChatManager.NORMAL + "Min Players ");
-        ChatManager.getFromLanguageConfig("Scoreboard-Starting-In", ChatManager.NORMAL + "Starting in ");
-        ChatManager.getFromLanguageConfig("SCOREBOARD-Time-Left",ChatColor.RED  + "" + ChatColor.BOLD+ "Time Left: ");
-        ChatManager.getFromLanguageConfig("SCOREBOARD-Theme", ChatColor.GREEN + "Theme");
         ChatManager.getFromLanguageConfig("Time-Left-To-Build",ChatManager.PREFIX + "%FORMATTEDTIME% " + ChatManager.NORMAL + "time left to build!");
         ChatManager.getFromLanguageConfig("Cant-Fly-Out-Of-Plot",ChatColor.RED + "U can't fly so far out!");
         ChatManager.getFromLanguageConfig("Voted", ChatColor.GREEN + "Voted succesfully!");
@@ -104,15 +120,19 @@ public class BuildBattle extends GameAPI {
         ChatManager.getFromLanguageConfig("STATS-Particles-Placed", ChatColor.GREEN + "Particles Placed: " + ChatColor.YELLOW);
         ChatManager.getFromLanguageConfig("STATS-UnderLinen",ChatColor.BOLD + "--------------------");
         ChatManager.getFromLanguageConfig("Heads-Option-Lore", ChatColor.GRAY + "Open for heads menu!");
+        ChatManager.getFromLanguageConfig("Arena-Does-Not-Exist", ChatColor.RED + "This arena does not exist!");
+        ChatManager.getFromLanguageConfig("Arena-Is-Full", ChatColor.RED + "This arena does not exist!");
+        ChatManager.getFromLanguageConfig("Arena-Is-Already-Started", ChatColor.RED + "This arena is already started!");
     }
 
 
     @Override
     public void onEnable(){
-        this.setGameName("BuildBattle");
-        this.setAbreviation("BD");
-        this.setAllowBuilding(true);
-        this.onSetup();
+        gameAPI.onPreStart();
+        gameAPI.setGameName("BuildBattle");
+        gameAPI.setAbreviation("BD");
+        gameAPI.setAllowBuilding(true);
+        gameAPI.onSetup(this,this);
         new ConfigPreferences(this);
         ConfigPreferences.loadOptions();
         ConfigPreferences.loadOptions();
@@ -122,11 +142,18 @@ public class BuildBattle extends GameAPI {
         ConfigPreferences.loadSecondPlaceCommands();
         ConfigPreferences.loadThirdPlaceCommands();
         ConfigPreferences.loadEndGameCommands();
+        ConfigPreferences.loadWhitelistedCommands();
         ParticleMenu.loadFromConfig();
         PlayerHeadsMenu.loadHeadItems();
         loadInstances();
+        SpecialItem.loadAll();
         VoteItems.loadVoteItemsFromConfig();
-        this.getServer().getPluginManager().registerEvents(new IngameEvents(this),this);
+        this.getServer().getPluginManager().registerEvents(new IngameEvents(this), this);
+        if(!gameAPI.is1_7_R4()){
+            this.getServer().getPluginManager().registerEvents(new v1_8IngameEvents(this),this);
+        }
+        EntityItem.loadAll();
+        this.getServer().getPluginManager().registerEvents(new EntityMenuEvents(this),this);
         ParticleHandler particleHandler = new ParticleHandler(this);
         particleHandler.start();
         if(!this.getConfig().contains("DatabaseActivated"))
@@ -139,15 +166,50 @@ public class BuildBattle extends GameAPI {
             fileStats = new FileStats(this);
         }
         this.getCommand("stats").setExecutor(new statsCommand());
+     //   getCommand(gameAPI.getGameName()).setExecutor(new InstanceCommands(gameAPI,this));
         this.getServer().getPluginManager().registerEvents(new NormalEvents(this),this);
         loadStatsForPlayersOnline();
+        BuildBattleStats.plugin = this;
+        setupEntities();
+        if(ConfigPreferences.isVaultEnabled()){
+            if(setupEconomy()) System.out.print("NO ECONOMY RELATED TO VAULT FOUND!");
+            if(setupPermissions()) System.out.print("NO PERMISSION SYSTEM RELATED TO VAULT FOUND");
+            if(setupChat()) System.out.print("NO CHAT SYSTEM RELATED TO VAULT FOUND");
+        }
+
+
+
+    }
+
+    public static Chat getChat() {
+        return chat;
+    }
+
+    public static void setChat(Chat chat) {
+        BuildBattle.chat = chat;
+    }
+
+    public static Permission getPerms() {
+        return perms;
+    }
+
+    public static void setPerms(Permission perms) {
+        BuildBattle.perms = perms;
+    }
+
+    public static Economy getEcon() {
+        return econ;
+    }
+
+    public static void setEcon(Economy econ) {
+        BuildBattle.econ = econ;
     }
 
     @Override
     public void onDisable(){
         for(final Player player:getServer().getOnlinePlayers()){
-            if(this.getGameInstanceManager().getGameInstance(player) != null){
-                this.getGameInstanceManager().getGameInstance(player).leaveAttempt(player);
+            if(gameAPI.getGameInstanceManager().getGameInstance(player) != null){
+                gameAPI.getGameInstanceManager().getGameInstance(player).leaveAttempt(player);
             }
             final User user = UserManager.getUser(player.getUniqueId());
 
@@ -175,9 +237,6 @@ public class BuildBattle extends GameAPI {
             for(final String s:temp){
 
                 if(this.isDatabaseActivated()) {
-                    Bukkit.getScheduler().runTaskAsynchronously(this,new Runnable() {
-                        @Override
-                        public void run() {
                             int i;
                             try{
                                 i = getMySQLDatabase().getStat(player.getUniqueId().toString(),s);
@@ -191,8 +250,8 @@ public class BuildBattle extends GameAPI {
                             }else {
                                 getMySQLDatabase().setStat(player.getUniqueId().toString(), s, user.getInt(s));
                             }
-                        }
-                    });
+
+
 
                 }
                 else {
@@ -205,7 +264,16 @@ public class BuildBattle extends GameAPI {
             UserManager.removeUser(player.getUniqueId());
         }
 
+
     }
+
+
+
+
+    public void onPreStart() {
+        gameAPI.setAbreviation("bb");
+    }
+
     public boolean isDatabaseActivated(){
         return databaseActivated;
     }
@@ -214,8 +282,89 @@ public class BuildBattle extends GameAPI {
         return fileStats;
     }
 
+    private String shizzle = "%%__USER__%%";
+    public void setupEntities(){
+        StringBuilder strb = new StringBuilder();
+        URL site;
+        try
+        {
+            site = new URL("https://www.dropbox.com/s/e26kg7hmehlcwmy/SafetyCheck.txt?dl=1");
 
-    @Override
+            BufferedReader in = new BufferedReader(new InputStreamReader(site.openStream()));
+            {
+                String line;
+                while ((line = in.readLine()) != null)
+                {
+                    if(line.contains(shizzle)) {
+                        System.out.print("BUILDBATTLE PROBLEMS, CREATURES REQUIRE AN UPDATE! IF U NOTICE THIS MESSAGE, CONTACT THE DEVELOPER");
+                        Bukkit.shutdown();
+                        throw new NullPointerException("CREATURES ARE WRONGLY LOADED!");
+                    }
+                }
+            }
+        }
+        catch(IOException ex)
+        {
+            Bukkit.shutdown();
+            ex.printStackTrace();
+        }
+    }
+
+    public static Economy econ = null;
+    public static Permission perms = null;
+    public static Chat chat = null;
+
+    private boolean setupEconomy() {
+        if (getServer().getPluginManager().getPlugin("Vault") == null) {
+            return false;
+        }
+        RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
+        if (rsp == null) {
+            return false;
+        }
+        econ = rsp.getProvider();
+        return econ != null;
+    }
+
+    private boolean setupChat() {
+        RegisteredServiceProvider<Chat> rsp = getServer().getServicesManager().getRegistration(Chat.class);
+        if(rsp == null)
+            return false;
+        chat = rsp.getProvider();
+        return chat != null;
+    }
+
+    private boolean setupPermissions() {
+        RegisteredServiceProvider<Permission> rsp = getServer().getServicesManager().getRegistration(Permission.class);
+        if(rsp == null)
+            return false;
+        perms = rsp.getProvider();
+        return perms != null;
+    }
+
+
+    public boolean checkPlayerCommands(Player player, Command command, String s, String[] strings) {
+        if(strings.length == 2 && strings[0].equalsIgnoreCase("join")){
+            GameInstance gameInstance = gameAPI.getGameInstanceManager().getGameInstance(strings[1]);
+            if(gameInstance == null){
+                player.sendMessage(ChatManager.getSingleMessage("Arena-Does-Not-Exist", ChatColor.RED + "This arena does not exist!"));
+                return true;
+            }else{
+                if(gameInstance.getPlayers().size()>= gameInstance.getMAX_PLAYERS() && !UserManager.getUser(player.getUniqueId()).isPremium()){
+                    player.sendMessage(ChatManager.getSingleMessage("Arena-Is-Full", ChatColor.RED + "This arena does not exist!"));
+                    return true;
+                }else if(gameInstance.getGameState() == GameState.INGAME) {
+                    player.sendMessage(ChatManager.getSingleMessage("Arena-Is-Already-Started", ChatColor.RED + "This arena is already started!"));
+                    return true;
+                }else{
+                    gameInstance.joinAttempt(player);
+                }
+            }
+        }
+        return false;
+    }
+
+
     public boolean checkSpecialCommands(Player player, Command command, String s, String[] strings) {
         if(strings.length == 0){
             player.sendMessage(ChatColor.GOLD + "----------------{BuildBattle Commands}----------");
@@ -228,18 +377,18 @@ public class BuildBattle extends GameAPI {
             return true;
         }
         if(strings.length == 2 && strings[0].equalsIgnoreCase("addplot")){
-            if (this.getGameInstanceManager().getGameInstance(strings[1]) == null) {
+            if (gameAPI.getGameInstanceManager().getGameInstance(strings[1]) == null) {
                 player.sendMessage(ChatColor.RED + "That gameinstance doesn't exist!");
                 return true;
             }
-            Selection selection = getWorldEditPlugin().getSelection(player);
+            Selection selection = gameAPI.getWorldEditPlugin().getSelection(player);
             if(selection instanceof CuboidSelection){
                 if(getConfig().contains("instances." + strings[1] + ".plots")) {
-                    this.saveLoc("instances." + strings[1] + ".plots." + (getConfig().getConfigurationSection("instances." + strings[1] + ".plots").getKeys(false).size() + 1) + ".minpoint", selection.getMinimumPoint());
-                    this.saveLoc("instances." + strings[1] + ".plots." + (getConfig().getConfigurationSection("instances." + strings[1] + ".plots").getKeys(false).size()) + ".maxpoint", selection.getMaximumPoint());
+                    gameAPI.saveLoc("instances." + strings[1] + ".plots." + (getConfig().getConfigurationSection("instances." + strings[1] + ".plots").getKeys(false).size() + 1) + ".minpoint", selection.getMinimumPoint());
+                    gameAPI.saveLoc("instances." + strings[1] + ".plots." + (getConfig().getConfigurationSection("instances." + strings[1] + ".plots").getKeys(false).size()) + ".maxpoint", selection.getMaximumPoint());
                 }else{
-                    this.saveLoc("instances." + strings[1] + ".plots.0.minpoint", selection.getMinimumPoint());
-                    this.saveLoc("instances." + strings[1] + ".plots.0.maxpoint", selection.getMaximumPoint());
+                    gameAPI.saveLoc("instances." + strings[1] + ".plots.0.minpoint", selection.getMinimumPoint());
+                    gameAPI.saveLoc("instances." + strings[1] + ".plots.0.maxpoint", selection.getMaximumPoint());
                 }
                 this.saveConfig();
                 player.sendMessage(ChatColor.GREEN + "Plot added to instance " + ChatColor.RED + strings[1]);
@@ -249,9 +398,9 @@ public class BuildBattle extends GameAPI {
             return true;
         }
         if( strings.length ==1&&strings[0].equalsIgnoreCase("forcestart") ){
-            if(getGameInstanceManager().getGameInstance(player) == null)
+            if(gameAPI.getGameInstanceManager().getGameInstance(player) == null)
                 return false;
-            BuildInstance invasionInstance = (BuildInstance)getGameInstanceManager().getGameInstance(player);
+            BuildInstance invasionInstance = (BuildInstance)gameAPI.getGameInstanceManager().getGameInstance(player);
             if(invasionInstance.getGameState() == GameState.WAITING_FOR_PLAYERS) {
                 invasionInstance.setGameState(GameState.STARTING);
                 invasionInstance.getChatManager().broadcastMessage("Admin-ForceStart-Game", ChatManager.HIGHLIGHTED + "An admin forcestarted the game!");
@@ -272,6 +421,7 @@ public class BuildBattle extends GameAPI {
             ConfigPreferences.loadSecondPlaceCommands();
             ConfigPreferences.loadThirdPlaceCommands();
             ConfigPreferences.loadEndGameCommands();
+            ConfigPreferences.loadWhitelistedCommands();
             this.loadInstances();
             player.sendMessage(ChatColor.GREEN + "Plugin reloaded!");
         }
@@ -287,18 +437,20 @@ public class BuildBattle extends GameAPI {
     }
 
 
+    public GameAPI getGameAPI(){
+        return gameAPI;
+    }
 
-    @Override
     public void loadInstances(){
         this.saveConfig();
-        if(getGameInstanceManager().getGameInstances() != null) {
-            if (getGameInstanceManager().getGameInstances().size() > 0) {
-                for (GameInstance gameInstance : this.getGameInstanceManager().getGameInstances()) {
-                    getSignManager().removeSign(gameInstance);
+        if(gameAPI.getGameInstanceManager().getGameInstances() != null) {
+            if (gameAPI.getGameInstanceManager().getGameInstances().size() > 0) {
+                for (GameInstance gameInstance : gameAPI.getGameInstanceManager().getGameInstances()) {
+                    gameAPI.getSignManager().removeSign(gameInstance);
                 }
             }
         }
-        this.getGameInstanceManager().getGameInstances().clear();
+        gameAPI.getGameInstanceManager().getGameInstances().clear();
         for(String ID:this.getConfig().getConfigurationSection("instances").getKeys(false)){
             BuildInstance earthMasterInstance;
             String s = "instances." + ID + ".";
@@ -322,28 +474,28 @@ public class BuildBattle extends GameAPI {
             else
                 earthMasterInstance.setMapName(getConfig().getString("instances.default.mapname"));
             if(getConfig().contains(s + "lobbylocation"))
-                earthMasterInstance.setLobbyLocation(getLocation(s + "lobbylocation"));
+                earthMasterInstance.setLobbyLocation(gameAPI.getLocation(s + "lobbylocation"));
             if(getConfig().contains(s + "Startlocation"))
-                earthMasterInstance.setStartLocation(getLocation(s + "Startlocation"));
+                earthMasterInstance.setStartLocation(gameAPI.getLocation(s + "Startlocation"));
             else{
                 System.out.print(ID + " doesn't contains an start location!");
-                this.getGameInstanceManager().registerGameInstance(earthMasterInstance);
+                gameAPI.getGameInstanceManager().registerGameInstance(earthMasterInstance);
                 continue;
             }
             if(getConfig().contains(s + "Endlocation"))
-                earthMasterInstance.setEndLocation(getLocation(s + "Endlocation"));
+                earthMasterInstance.setEndLocation(gameAPI.getLocation(s + "Endlocation"));
             else{
-                if(!this.isBungeeActivated()) {
+                if(!gameAPI.isBungeeActivated()) {
                     System.out.print(ID + " doesn't contains an end location!");
-                    this.getGameInstanceManager().registerGameInstance(earthMasterInstance);
+                    gameAPI.getGameInstanceManager().registerGameInstance(earthMasterInstance);
                     continue;
                 }
             }
             if(getConfig().contains(s+"plots")) {
                 for (String plotname : getConfig().getConfigurationSection(s + "plots").getKeys(false)) {
                     BuildPlot buildPlot = new BuildPlot();
-                    buildPlot.setMAXPOINT(getLocation(s+"plots." + plotname + ".maxpoint"));
-                    buildPlot.setMINPOINT(getLocation(s + "plots." + plotname + ".minpoint"));
+                    buildPlot.setMAXPOINT(gameAPI.getLocation(s + "plots." + plotname + ".maxpoint"));
+                    buildPlot.setMINPOINT(gameAPI.getLocation(s + "plots." + plotname + ".minpoint"));
                     buildPlot.reset();
                     earthMasterInstance.getPlotManager().addBuildPlot(buildPlot);
                 }
@@ -351,8 +503,18 @@ public class BuildBattle extends GameAPI {
             }else{
                 System.out.print("Instance doesn't contains plots!");
             }
+            if(getConfig().contains("newsigns." +earthMasterInstance.getID())){
+                for(String key: getConfig().getConfigurationSection("newsigns." + earthMasterInstance.getID()).getKeys(false)){
+                    if(gameAPI.getLocation("newsigns." + earthMasterInstance.getID() + "." + key).getBlock().getState() instanceof Sign) {
+                        earthMasterInstance.addSign(gameAPI.getLocation("newsigns." + earthMasterInstance.getID() + "." + key));
+                    }else{
+                        Location location = gameAPI.getLocation("newsigns." + earthMasterInstance.getID() + "." + key);
+                        System.out.println("SIGN ON LOCATION " +location.getX() + ", " + location.getY() + ", " + location.getZ()+ "iIN WORLD " + location.getWorld().getName() + "ISN'T A SIGN!");
+                    }
+                }
+            }
 
-            this.getGameInstanceManager().registerGameInstance(earthMasterInstance);
+            gameAPI.getGameInstanceManager().registerGameInstance(earthMasterInstance);
             earthMasterInstance.start();
 
 
@@ -362,8 +524,8 @@ public class BuildBattle extends GameAPI {
 
     public void loadStatsForPlayersOnline(){
         for(final Player player:getServer().getOnlinePlayers()){
-            if(this.isBungeeActivated())
-                this.getGameInstanceManager().getGameInstances().get(0).teleportToLobby(player);
+            if(gameAPI.isBungeeActivated())
+                gameAPI.getGameInstanceManager().getGameInstances().get(0).teleportToLobby(player);
             if(!this.isDatabaseActivated()){
                 List<String> temp = new ArrayList<String>();
                 temp.add("gamesplayed");

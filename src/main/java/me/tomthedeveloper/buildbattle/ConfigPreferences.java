@@ -4,7 +4,6 @@ import me.TomTheDeveloper.Handlers.ConfigurationManager;
 import me.tomthedeveloper.buildbattle.instance.BuildInstance;
 import org.bukkit.configuration.file.FileConfiguration;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -21,12 +20,14 @@ public class ConfigPreferences {
     private static List<String> winCommands = new ArrayList<String>();
     private static List<String> endGameCommands = new ArrayList<String>();
     private static List<String> secondPlaceCommands = new ArrayList<String>();
+    private static List<String> whitelistedCommands = new ArrayList<String>();
 
     private static List<String> thirdPlaceCommands = new ArrayList<String>();
 
 
     public ConfigPreferences(BuildBattle buildBattle){
         config = buildBattle.getConfig();
+
         this.buildBattle = buildBattle;
     }
 
@@ -49,6 +50,17 @@ public class ConfigPreferences {
         }
         for(String command:config.getStringList("Win-Commands")){
             winCommands.add(command);
+        }
+
+    }
+
+    public static void loadWhitelistedCommands(){
+        if(!config.contains("Whitelisted-Commands")){
+            config.set("Whitelisted-Commands", Arrays.asList(new String[]{"me","help"}));
+            saveConfig();
+        }
+        for(String command:config.getStringList("Whitelisted-Commands")){
+            whitelistedCommands.add(command);
         }
 
     }
@@ -113,6 +125,10 @@ public class ConfigPreferences {
         return options.get("Default-Floor-Material");
     }
 
+    public static int getLobbyTimer() {
+        return options.get("Lobby-Starting-Time");
+    }
+
     public static void loadBlackList(){
         if(!config.contains("blacklist")){
             config.set("blacklist", Arrays.asList(new Integer[]{46, 57}));
@@ -128,6 +144,10 @@ public class ConfigPreferences {
         if(options.get("bar")==1)
             return true;
         return false;
+    }
+
+    public static List<String> getWhitelistedCommands(){
+        return whitelistedCommands;
     }
 
     public  static boolean isHidePlayersOutsideGameEnabled(){
@@ -209,6 +229,9 @@ public class ConfigPreferences {
         loadOptions.add("Mobs-Max-Amount-Per-Plot");
         loadOptions.add("Hide-Players-Outside-Game");
         loadOptions.add("Disable-Scoreboard-Ingame");
+        loadOptions.add("Hook-Into-Vault");
+        loadOptions.add("Lobby-Starting-Time");
+
 
         for(String option:loadOptions){
             if(config.contains(option)) {
@@ -265,10 +288,18 @@ public class ConfigPreferences {
                     config.set("Hide-Players-Outside-Game",true);
                 if(option.equals("Disable-Scoreboard-Ingame"))
                     config.set("Disable-Scoreboard-Ingame", false);
+                if(option.equals("Hook-Into-Vault"))
+                    config.set("Hook-Into-Vault",false);
+                if(option.equals("Lobby-Starting-Time"))
+                    config.set("Lobby-Starting-Time",60);
                 saveConfig();
         }
             saveConfig();
         }
+    }
+
+    public static boolean isVaultEnabled(){
+        return options.get("Hook-Into-Vault") == 1;
     }
 
 

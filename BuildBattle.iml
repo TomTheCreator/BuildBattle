@@ -11,11 +11,11 @@
     </content>
     <orderEntry type="inheritedJdk" />
     <orderEntry type="sourceFolder" forTests="false" />
-    <orderEntry type="library" name="GameAPI" level="project" />
-    <orderEntry type="library" name="spigot-1.8.7" level="project" />
     <orderEntry type="library" name="worldedit" level="project" />
-    <orderEntry type="library" name="BossBarAPI_v1.0.6" level="project" />
     <orderEntry type="library" name="com.jolbox:bonecp:0.8.0.RELEASE" level="project" />
+    <orderEntry type="library" name="Vault" level="project" />
+    <orderEntry type="library" name="spigot-1.8.8" level="project" />
+    <orderEntry type="library" name="GameAPI" level="project" />
+    <orderEntry type="library" name="BossBarAPI_v2.4.1" level="project" />
   </component>
 </module>
-

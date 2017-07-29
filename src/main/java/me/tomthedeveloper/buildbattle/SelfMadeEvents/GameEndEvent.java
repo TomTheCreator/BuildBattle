@@ -1,7 +1,6 @@
 package me.tomthedeveloper.buildbattle.SelfMadeEvents;
 
 import me.tomthedeveloper.buildbattle.instance.BuildInstance;
-import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
 import org.bukkit.event.HandlerList;
 
